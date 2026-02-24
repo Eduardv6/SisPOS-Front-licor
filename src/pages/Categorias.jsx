@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { categoryService } from "../services/categoryService";
+import { useToast } from "../context/ToastContext";
 
 const COLORS = [
   "bg-slate-500",
@@ -36,6 +37,7 @@ const COLORS = [
 ];
 
 export default function Categorias() {
+  const toast = useToast();
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -165,10 +167,13 @@ export default function Categorias() {
 
       // Pass the new category to fetchCategories to ensure it's included/sorted correctly immediately
       await fetchCategories(savedCategory);
+      toast.success(
+        categoryForm.id ? "Categoría actualizada" : "Categoría creada",
+      );
       setIsCategoryModalOpen(false);
     } catch (error) {
       console.error("Error saving category:", error);
-      alert("Error al guardar la categoría");
+      toast.error("Error al guardar la categoría");
     }
   };
 
@@ -178,10 +183,12 @@ export default function Categorias() {
 
     try {
       await categoryService.delete(selectedCategory.id);
+      toast.success("Categoría eliminada");
       setSelectedCategory(null);
       await fetchCategories();
     } catch (error) {
       console.error("Error deleting category:", error);
+      toast.error("Error al eliminar la categoría");
     }
   };
 
@@ -209,10 +216,13 @@ export default function Categorias() {
       }
 
       await fetchCategories();
+      toast.success(
+        subcategoryForm.id ? "Subcategoría actualizada" : "Subcategoría creada",
+      );
       setIsSubcategoryModalOpen(false);
     } catch (error) {
       console.error("Error saving subcategory:", error);
-      alert("Error al guardar la subcategoría");
+      toast.error("Error al guardar la subcategoría");
     }
   };
 
@@ -230,10 +240,11 @@ export default function Categorias() {
 
     try {
       await categoryService.delete(subId);
+      toast.success("Subcategoría eliminada");
       await fetchCategories();
     } catch (error) {
       console.error("Error deleting subcategory:", error);
-      alert("Error al eliminar la subcategoría");
+      toast.error("Error al eliminar la subcategoría");
     }
   };
 
@@ -400,7 +411,7 @@ export default function Categorias() {
                   </button>
                   <button
                     onClick={handleDeleteCategory}
-                    className="p-2 text-gray-400 hover:text-danger-600 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm"
+                    className="p-2 text-gray-400 hover:text-primary-600 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-gray-200 hover:shadow-sm"
                   >
                     <Trash2 size={20} />
                   </button>
@@ -468,7 +479,7 @@ export default function Categorias() {
                                 e.stopPropagation();
                                 handleDeleteSubcategory(sub.id);
                               }}
-                              className="p-1.5 text-gray-400 hover:text-danger-600 hover:bg-gray-100 rounded-lg transition-colors"
+                              className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
                               title="Eliminar"
                             >
                               <Trash2 size={16} />

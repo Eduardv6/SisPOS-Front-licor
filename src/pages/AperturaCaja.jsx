@@ -184,7 +184,7 @@ export default function AperturaCaja() {
     VENTA: "bg-success-100 text-success-700",
     INGRESO_EXTRA: "bg-info-100 text-info-700",
     RETIRO: "bg-warning-100 text-warning-700",
-    GASTO: "bg-danger-100 text-danger-700",
+    GASTO: "bg-primary-100 text-primary-700",
   };
 
   const tipoLabels = {
@@ -442,7 +442,7 @@ export default function AperturaCaja() {
                       </button>
                       <button
                         onClick={() => handleOpenModal("cerrar", caja)}
-                        className="flex-1 py-2 bg-white border border-danger-200 rounded-lg text-sm font-bold text-danger-600 hover:bg-danger-50 hover:border-danger-500 transition-colors flex items-center justify-center gap-2"
+                        className="flex-1 py-2 bg-white border border-primary-200 rounded-lg text-sm font-bold text-primary-600 hover:bg-primary-50 hover:border-primary-500 transition-colors flex items-center justify-center gap-2"
                       >
                         <Lock size={16} /> Cerrar Caja
                       </button>
@@ -522,7 +522,7 @@ export default function AperturaCaja() {
                       <td
                         className={clsx(
                           "px-6 py-4 font-bold font-mono",
-                          isPositive ? "text-success-600" : "text-danger-600",
+                          isPositive ? "text-success-600" : "text-primary-600",
                         )}
                       >
                         {isPositive ? "+" : "-"}Bs.{" "}
@@ -566,7 +566,7 @@ export default function AperturaCaja() {
             </div>
 
             {error && (
-              <div className="bg-danger-50 border border-danger-200 text-danger-700 px-4 py-3 rounded-lg text-sm mb-4">
+              <div className="bg-primary-50 border border-primary-200 text-primary-700 px-4 py-3 rounded-lg text-sm mb-4">
                 {error}
               </div>
             )}
@@ -651,7 +651,7 @@ export default function AperturaCaja() {
             </div>
 
             {error && (
-              <div className="bg-danger-50 border border-danger-200 text-danger-700 px-4 py-3 rounded-lg text-sm mb-4">
+              <div className="bg-primary-50 border border-primary-200 text-primary-700 px-4 py-3 rounded-lg text-sm mb-4">
                 {error}
               </div>
             )}
@@ -695,7 +695,7 @@ export default function AperturaCaja() {
               <button
                 onClick={handleCerrarCaja}
                 disabled={saving}
-                className="flex-1 py-2.5 bg-danger-600 text-white font-bold rounded-lg hover:bg-danger-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+                className="flex-1 py-2.5 bg-primary-600 text-white font-bold rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
               >
                 {saving ? (
                   <Loader2 size={18} className="animate-spin" />
@@ -824,7 +824,7 @@ export default function AperturaCaja() {
                                   "font-bold font-mono text-sm",
                                   isPos
                                     ? "text-success-600"
-                                    : "text-danger-600",
+                                    : "text-primary-600",
                                 )}
                               >
                                 {isPos ? "+" : "-"}Bs.{" "}

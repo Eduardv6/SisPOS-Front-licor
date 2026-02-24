@@ -31,6 +31,7 @@ import { salesService } from "../services/salesService";
 import { categoryService } from "../services/categoryService";
 import { customerService } from "../services/customerService";
 import { cashRegisterService } from "../services/cashRegisterService";
+import { settingService } from "../services/settingService";
 import { useAuth } from "../context/AuthContext";
 
 export default function POS() {
@@ -57,6 +58,13 @@ export default function POS() {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [lastSaleData, setLastSaleData] = useState(null);
+  const [settings, setSettings] = useState({
+    empresa_nombre: "Licorería",
+    empresa_nit: "123456789",
+    empresa_direccion: "Sucursal Central",
+    empresa_mensaje_recibo: "¡GRACIAS POR SU COMPRA!",
+    empresa_logo: null,
+  });
 
   const handleOpenMovementModal = (type) => {
     setMovementType(type);
@@ -80,10 +88,9 @@ export default function POS() {
     setError("");
     try {
       await cashRegisterService.addMovement({
-        cajaId: openRegisterId,
         tipo: movementType,
         monto: parseFloat(movementAmount),
-        descripcion: movementDesc,
+        concepto: movementDesc,
       });
       setIsMovementModalOpen(false);
       setSuccess(
@@ -146,7 +153,19 @@ export default function POS() {
         console.error("Error fetching open register", err);
       }
     };
+    const fetchSettings = async () => {
+      try {
+        const data = await settingService.getSettings();
+        if (Object.keys(data).length > 0) {
+          setSettings((prev) => ({ ...prev, ...data }));
+        }
+      } catch (err) {
+        console.error("Error fetching settings in POS", err);
+      }
+    };
+
     fetchOpenRegister();
+    fetchSettings();
   }, []);
 
   const handleCloseRegister = async () => {
@@ -191,6 +210,8 @@ export default function POS() {
   const [discount, setDiscount] = useState(0);
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
   const [tempDiscount, setTempDiscount] = useState("");
+  const [isExpressMode, setIsExpressMode] = useState(false);
+  const [expressData, setExpressData] = useState({ nombre: "", ciNit: "" });
 
   // Cargar Categorías
   useEffect(() => {
@@ -362,7 +383,9 @@ export default function POS() {
         descuento: parseFloat(discount) || 0,
         total: total,
         cambio: res.cambio,
-        usuario: user?.nombre || "Cajero",
+        usuario: user?.nombre
+          ? `${user.nombre} ${user.apellido || ""}`.trim()
+          : user?.username || "Cajero",
         cliente: selectedClient,
         metodoPagoTexto: paymentMethod,
       });
@@ -401,7 +424,10 @@ export default function POS() {
           <div>
             <h1 className="text-xl font-bold text-gray-900">Punto de Venta</h1>
             <p className="text-xs text-gray-500">
-              Atendiendo como: {user?.nombre || "Cajero"}
+              Atendiendo como:{" "}
+              {user?.nombre
+                ? `${user.nombre} ${user.apellido || ""}`.trim()
+                : user?.username || "Cajero"}
             </p>
           </div>
 
@@ -433,7 +459,7 @@ export default function POS() {
             </button>
             <button
               onClick={() => setIsCloseRegisterModalOpen(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-danger-50 text-danger-700 hover:bg-danger-100 rounded-lg transition-colors text-xs font-bold border border-danger-200"
+              className="flex items-center gap-2 px-3 py-2 bg-primary-50 text-primary-700 hover:bg-primary-100 rounded-lg transition-colors text-xs font-bold border border-primary-200"
             >
               <LogOut size={16} /> Cerrar
             </button>
@@ -550,6 +576,15 @@ export default function POS() {
                       )}
                     </div>
                     <div className="flex-1 min-h-[50px]">
+                      <div className="text-[9px] font-bold text-gray-400 truncate mb-0.5">
+                        {product.category}
+                        {product.marca && (
+                          <span className="text-primary-400">
+                            {" "}
+                            • {product.marca}
+                          </span>
+                        )}
+                      </div>
                       <div className="font-bold text-[10px] text-gray-900 leading-tight mb-1 line-clamp-2 uppercase">
                         {product.nombre}
                       </div>
@@ -564,7 +599,7 @@ export default function POS() {
                         "text-[10px] font-bold px-2 py-0.5 rounded-full self-start",
                         product.stock > 0
                           ? "bg-success-100 text-success-700"
-                          : "bg-danger-100 text-danger-700",
+                          : "bg-primary-100 text-primary-700",
                       )}
                     >
                       Stock: {product.stock}
@@ -591,7 +626,7 @@ export default function POS() {
           <button
             onClick={clearCart}
             disabled={cart.length === 0}
-            className="p-2 text-danger-600 hover:bg-danger-50 rounded-lg transition-colors disabled:opacity-30"
+            className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors disabled:opacity-30"
             title="Limpiar Carrito"
           >
             <Trash2 size={18} />
@@ -618,7 +653,7 @@ export default function POS() {
                     </div>
                     <button
                       onClick={() => removeFromCart(item.id)}
-                      className="text-gray-300 hover:text-danger-500 transition-colors opacity-0 group-hover:opacity-100"
+                      className="text-gray-300 hover:text-primary-500 transition-colors opacity-0 group-hover:opacity-100"
                     >
                       <X size={14} />
                     </button>
@@ -742,66 +777,153 @@ export default function POS() {
               </button>
             </div>
             <div className="p-4">
-              <div className="relative mb-4">
-                <Search
-                  size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                />
-                <input
-                  type="text"
-                  placeholder="Buscar cliente..."
-                  value={clientSearch}
-                  onChange={(e) => setClientSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
-                />
-              </div>
-              <div className="max-h-60 overflow-y-auto space-y-2 custom-scrollbar">
+              <div className="flex bg-gray-100 p-1 rounded-lg mb-4">
                 <button
-                  onClick={() => {
-                    setSelectedClient(null);
-                    setIsClientModalOpen(false);
-                  }}
+                  onClick={() => setIsExpressMode(false)}
                   className={clsx(
-                    "w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3",
-                    !selectedClient
-                      ? "border-primary-500 bg-primary-50 text-primary-700"
-                      : "border-gray-100 hover:bg-gray-50",
+                    "flex-1 py-1.5 text-xs font-bold rounded-md transition-all",
+                    !isExpressMode
+                      ? "bg-white text-primary-600 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700",
                   )}
                 >
-                  <User size={20} />
-                  <div>
-                    <div className="font-bold text-sm">Consumidor Final</div>
-                    <div className="text-xs opacity-70">Cliente Genérico</div>
-                  </div>
+                  Lista
                 </button>
-                {clients.map((client) => (
+                <button
+                  onClick={() => setIsExpressMode(true)}
+                  className={clsx(
+                    "flex-1 py-1.5 text-xs font-bold rounded-md transition-all",
+                    isExpressMode
+                      ? "bg-white text-primary-600 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700",
+                  )}
+                >
+                  Express
+                </button>
+              </div>
+
+              {!isExpressMode ? (
+                <>
+                  <div className="relative mb-4">
+                    <Search
+                      size={18}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Buscar cliente..."
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                    />
+                  </div>
+                  <div className="max-h-60 overflow-y-auto space-y-2 custom-scrollbar">
+                    <button
+                      onClick={() => {
+                        setSelectedClient(null);
+                        setIsClientModalOpen(false);
+                      }}
+                      className={clsx(
+                        "w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3",
+                        !selectedClient
+                          ? "border-primary-500 bg-primary-50 text-primary-700"
+                          : "border-gray-100 hover:bg-gray-50",
+                      )}
+                    >
+                      <User size={20} />
+                      <div>
+                        <div className="font-bold text-sm">
+                          Consumidor Final
+                        </div>
+                        <div className="text-xs opacity-70">
+                          Cliente Genérico
+                        </div>
+                      </div>
+                    </button>
+                    {clients.map((client) => (
+                      <button
+                        key={client.id}
+                        onClick={() => {
+                          setSelectedClient(client);
+                          setIsClientModalOpen(false);
+                        }}
+                        className={clsx(
+                          "w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3",
+                          selectedClient?.id === client.id
+                            ? "border-primary-500 bg-primary-50 text-primary-700"
+                            : "border-gray-100 hover:bg-gray-50",
+                        )}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-xs">
+                          {client.nombre.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-bold text-sm">
+                            {client.nombre} {client.apellido || ""}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {client.cedula || client.ciNit || "Sin CI/NIT"}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-200">
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                      Nombre / Razón Social
+                    </label>
+                    <input
+                      type="text"
+                      value={expressData.nombre}
+                      onChange={(e) =>
+                        setExpressData({
+                          ...expressData,
+                          nombre: e.target.value,
+                        })
+                      }
+                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none text-sm"
+                      placeholder="Nombre del cliente..."
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">
+                      NIT / CI
+                    </label>
+                    <input
+                      type="text"
+                      value={expressData.ciNit}
+                      onChange={(e) =>
+                        setExpressData({
+                          ...expressData,
+                          ciNit: e.target.value,
+                        })
+                      }
+                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none text-sm font-mono"
+                      placeholder="Número de documento..."
+                    />
+                  </div>
                   <button
-                    key={client.id}
                     onClick={() => {
-                      setSelectedClient(client);
+                      if (!expressData.nombre.trim()) return;
+                      setSelectedClient({
+                        id: null,
+                        nombre: expressData.nombre,
+                        ciNit: expressData.ciNit,
+                        isExpress: true,
+                      });
                       setIsClientModalOpen(false);
                     }}
-                    className={clsx(
-                      "w-full text-left p-3 rounded-lg border transition-all flex items-center gap-3",
-                      selectedClient?.id === client.id
-                        ? "border-primary-500 bg-primary-50 text-primary-700"
-                        : "border-gray-100 hover:bg-gray-50",
-                    )}
+                    disabled={!expressData.nombre.trim()}
+                    className="w-full py-3 bg-primary-600 text-white font-bold rounded-lg hover:bg-primary-700 transition-colors shadow-lg shadow-primary-500/20 disabled:opacity-50"
                   >
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 font-bold text-xs">
-                      {client.nombre.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm">
-                        {client.nombre} {client.apellido || ""}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {client.cedula || client.ciNit || "Sin CI/NIT"}
-                      </div>
-                    </div>
+                    Confirmar Datos
                   </button>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -965,8 +1087,8 @@ export default function POS() {
                     );
                   } else {
                     return (
-                      <div className="bg-danger-50 text-danger-700 py-3 px-4 rounded-xl flex flex-col items-center border border-danger-100">
-                        <div className="text-xs text-danger-500 font-bold uppercase mb-1">
+                      <div className="bg-primary-50 text-primary-700 py-3 px-4 rounded-xl flex flex-col items-center border border-primary-100">
+                        <div className="text-xs text-primary-500 font-bold uppercase mb-1">
                           Diferencia:
                         </div>
                         <div className="flex items-center gap-1 font-bold text-lg">
@@ -1050,7 +1172,7 @@ export default function POS() {
                   </div>
 
                   {error && (
-                    <div className="mb-4 p-3 bg-danger-50 text-danger-700 text-xs rounded-lg border border-danger-100 font-bold">
+                    <div className="mb-4 p-3 bg-primary-50 text-primary-700 text-xs rounded-lg border border-primary-100 font-bold">
                       {error}
                     </div>
                   )}
@@ -1110,7 +1232,7 @@ export default function POS() {
                             "w-full pl-10 pr-4 py-3 border-2 rounded-xl font-mono text-xl font-bold transition-colors outline-none",
                             Number(receivedAmount) > 0 &&
                               Number(receivedAmount) < total
-                              ? "border-danger-200 bg-danger-50 text-danger-900 focus:border-danger-500"
+                              ? "border-primary-200 bg-primary-50 text-primary-900 focus:border-primary-500"
                               : "border-gray-200 bg-gray-50 text-gray-900 focus:border-primary-500 bg-white",
                           )}
                           autoFocus
@@ -1127,7 +1249,7 @@ export default function POS() {
                           className={clsx(
                             "font-bold font-mono",
                             Number(receivedAmount) < total
-                              ? "text-danger-600"
+                              ? "text-primary-600"
                               : "text-success-600",
                           )}
                         >
@@ -1187,7 +1309,7 @@ export default function POS() {
             </div>
             <div className="p-6">
               {error && (
-                <div className="bg-danger-50 border border-danger-200 text-danger-700 px-4 py-3 rounded-lg text-sm mb-4">
+                <div className="bg-primary-50 border border-primary-200 text-primary-700 px-4 py-3 rounded-lg text-sm mb-4">
                   {error}
                 </div>
               )}
@@ -1340,14 +1462,26 @@ export default function POS() {
               >
                 {/* Header */}
                 <div className="text-center mb-4">
-                  <div className="w-16 h-16 bg-gray-900 text-white rounded-full flex items-center justify-center mx-auto mb-2 print:text-black print:border print:border-black">
-                    <Beer size={24} />
+                  <div className="w-20 h-20 bg-white border border-gray-100 rounded-xl flex items-center justify-center mx-auto mb-2 overflow-hidden">
+                    {settings.empresa_logo ? (
+                      <img
+                        src={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}${settings.empresa_logo}`}
+                        alt="Logo"
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-900 text-white flex items-center justify-center print:text-black print:border print:border-black">
+                        <Beer size={32} />
+                      </div>
+                    )}
                   </div>
                   <h2 className="font-bold text-base uppercase mb-1">
-                    Licorería
+                    {settings.empresa_nombre}
                   </h2>
-                  <p>Sucursal Central</p>
-                  <p className="text-[10px] text-gray-500">NIT: 123456789</p>
+                  <p>{settings.empresa_direccion}</p>
+                  <p className="text-[10px] text-gray-500">
+                    NIT: {settings.empresa_nit}
+                  </p>
                 </div>
 
                 <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
@@ -1471,7 +1605,10 @@ export default function POS() {
                 <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
 
                 <div className="text-center mt-4">
-                  <p className="font-bold">¡GRACIAS POR SU COMPRA!</p>
+                  <p className="font-bold uppercase">
+                    {settings.empresa_mensaje_recibo ||
+                      "¡GRACIAS POR SU COMPRA!"}
+                  </p>
                   <p className="text-[10px] mt-1">Vuelva pronto</p>
                 </div>
               </div>

@@ -28,4 +28,8 @@ export const cashRegisterService = {
   addMovement: async (data) => {
     return await api.post("/openingCashRegisters/movements", data);
   },
+
+  checkStatus: async () => {
+    return await api.get("/openingCashRegisters/status");
+  },
 };

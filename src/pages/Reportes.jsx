@@ -161,7 +161,7 @@ export default function Reportes() {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center gap-2">
+        <div className="bg-primary-50 text-primary-600 p-4 rounded-lg flex items-center gap-2">
           <AlertTriangle size={20} /> {error}
         </div>
       )}
@@ -244,12 +244,12 @@ export default function Reportes() {
                       >
                         <stop
                           offset="5%"
-                          stopColor="#E63946"
+                          stopColor="#0ea5e9"
                           stopOpacity={0.1}
                         />
                         <stop
                           offset="95%"
-                          stopColor="#E63946"
+                          stopColor="#0ea5e9"
                           stopOpacity={0}
                         />
                       </linearGradient>
@@ -283,7 +283,7 @@ export default function Reportes() {
                     <Area
                       type="monotone"
                       dataKey="ventas"
-                      stroke="#E63946"
+                      stroke="#0ea5e9"
                       strokeWidth={3}
                       fillOpacity={1}
                       fill="url(#colorVentas)"
@@ -399,7 +399,7 @@ export default function Reportes() {
                 {productStats.stockLow}
               </div>
             </div>
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-danger-500">
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm border-l-4 border-l-primary-500">
               <div className="text-sm font-medium text-gray-500 mb-1">
                 Sin Stock
               </div>
@@ -442,7 +442,7 @@ export default function Reportes() {
                       <td className="px-6 py-4 font-mono text-gray-500 text-xs">
                         {p.code}
                       </td>
-                      <td className="px-6 py-4 text-center font-bold text-danger-600">
+                      <td className="px-6 py-4 text-center font-bold text-primary-600">
                         {p.stock}
                       </td>
                       <td className="px-6 py-4 text-center text-gray-500">
@@ -453,7 +453,7 @@ export default function Reportes() {
                           className={clsx(
                             "px-2 py-1 rounded text-xs font-bold uppercase",
                             p.status === "Crítico"
-                              ? "bg-danger-100 text-danger-700"
+                              ? "bg-primary-100 text-primary-700"
                               : "bg-warning-100 text-warning-700",
                           )}
                         >
@@ -649,7 +649,7 @@ export default function Reportes() {
                       <td
                         className={clsx(
                           "px-6 py-4 text-center font-bold",
-                          c.diff < 0 ? "text-danger-600" : "text-gray-400",
+                          c.diff < 0 ? "text-primary-600" : "text-gray-400",
                         )}
                       >
                         {c.diff}
@@ -660,7 +660,7 @@ export default function Reportes() {
                             "px-2 py-1 rounded text-xs font-bold uppercase",
                             c.status === "Correcto"
                               ? "bg-success-100 text-success-700"
-                              : "bg-danger-100 text-danger-700",
+                              : "bg-primary-100 text-primary-700",
                           )}
                         >
                           {c.status}

@@ -434,7 +434,7 @@ export default function Clientes() {
                               setSelectedClient(client);
                               setIsDeleteModalOpen(true);
                             }}
-                            className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-danger-600"
+                            className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-primary-600"
                             title="Eliminar"
                           >
                             <Trash2 size={16} />
@@ -532,7 +532,7 @@ export default function Clientes() {
 
             <div className="overflow-y-auto p-6 space-y-8">
               {error && (
-                <div className="bg-danger-50 border border-danger-200 text-danger-700 px-4 py-3 rounded-lg text-sm">
+                <div className="bg-primary-50 border border-primary-200 text-primary-700 px-4 py-3 rounded-lg text-sm">
                   {error}
                 </div>
               )}
@@ -843,8 +843,8 @@ export default function Clientes() {
           ></div>
           <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95">
             <div className="p-6 text-center">
-              <div className="w-16 h-16 rounded-full bg-danger-50 flex items-center justify-center mx-auto mb-4">
-                <Trash2 size={28} className="text-danger-500" />
+              <div className="w-16 h-16 rounded-full bg-primary-50 flex items-center justify-center mx-auto mb-4">
+                <Trash2 size={28} className="text-primary-500" />
               </div>
               <h3 className="font-bold text-gray-900 text-lg mb-2">
                 ¿Eliminar cliente?
@@ -865,7 +865,7 @@ export default function Clientes() {
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="flex-1 py-2 bg-danger-600 text-white font-bold rounded-lg hover:bg-danger-700"
+                  className="flex-1 py-2 bg-primary-600 text-white font-bold rounded-lg hover:bg-primary-700"
                 >
                   Eliminar
                 </button>

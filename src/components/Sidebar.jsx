@@ -17,27 +17,38 @@ import { useNavigate } from "react-router-dom";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: ShoppingCart, label: "Punto de Venta", path: "/pos" },
-  { icon: Banknote, label: "Apertura de Caja", path: "/apertura-caja" },
-  { icon: Package, label: "Inventario", path: "/inventario" },
   { icon: Tag, label: "Productos", path: "/productos" },
   { icon: Layers, label: "Categorías", path: "/categorias" },
+  { icon: Package, label: "Inventario", path: "/inventario" },
   { icon: Users, label: "Clientes", path: "/clientes" },
-
-  { icon: FileText, label: "Reportes", path: "/reportes" },
   { icon: UserCog, label: "Usuarios", path: "/usuarios" },
+  { icon: Banknote, label: "Apertura de Caja", path: "/apertura-caja" },
+  { icon: ShoppingCart, label: "Punto de Venta", path: "/pos" },
+  { icon: FileText, label: "Reportes", path: "/reportes" },
   { icon: Settings, label: "Configuración", path: "/configuracion" },
 ];
 
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
+import { cashRegisterService } from "../services/cashRegisterService";
 
 export default function Sidebar() {
   const navigate = useNavigate();
-  const { logout, user } = useAuth(); // Get user for display too
+  const { logout, user } = useAuth();
+  const toast = useToast();
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      const status = await cashRegisterService.checkStatus();
+      if (status.isOpen) {
+        return toast.warning("Debes cerrar caja antes de salir");
+      }
+      logout();
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout check error:", error);
+      toast.error("Error al verificar estado de caja");
+    }
   };
 
   return (
@@ -50,13 +61,13 @@ export default function Sidebar() {
             <rect x="13" y="12" width="6" height="12" rx="1" fill="white" />
             <defs>
               <linearGradient id="gradient" x1="0" y1="0" x2="32" y2="32">
-                <stop offset="0%" stopColor="#E63946" />
-                <stop offset="100%" stopColor="#A8201A" />
+                <stop offset="0%" stopColor="#0ea5e9" />
+                <stop offset="100%" stopColor="#0369a1" />
               </linearGradient>
             </defs>
           </svg>
           <span className="text-xl font-extrabold text-gray-900 tracking-tighter">
-            InventiBar
+            Licoreria Brasíl
           </span>
         </div>
       </div>
@@ -79,9 +90,6 @@ export default function Sidebar() {
               <>
                 {isActive && (
                   <div className="absolute left-[-16px] top-1/2 -translate-y-1/2 w-1 h-6 bg-primary-500 rounded-r-sm hidden" />
-                  /* Original design had a left border indicator, but the gradient background handles it well. 
-                     I'll stick to the gradient background as per the original CSS .active class which had linear-gradient.
-                  */
                 )}
                 <item.icon
                   size={20}
@@ -100,7 +108,7 @@ export default function Sidebar() {
       <div className="p-4 border-t border-gray-100 space-y-4">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-4 px-4 py-3 rounded-md font-medium text-danger-600 hover:bg-danger-50 hover:translate-x-1 transition-all duration-200 group"
+          className="w-full flex items-center gap-4 px-4 py-3 rounded-md font-medium text-primary-600 hover:bg-primary-50 hover:translate-x-1 transition-all duration-200 group"
         >
           <LogOut size={20} className="transition-colors" />
           <span>Cerrar Sesión</span>

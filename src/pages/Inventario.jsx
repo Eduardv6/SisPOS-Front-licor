@@ -22,8 +22,10 @@ import {
 import clsx from "clsx";
 import { inventoryService } from "../services/inventoryService";
 import { productService } from "../services/productService";
+import { useToast } from "../context/ToastContext";
 
 export default function Inventario() {
+  const toast = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState("ingreso"); // ingreso, salida, ajuste, transferencia
   const [selectedMovement, setSelectedMovement] = useState(null);
@@ -44,7 +46,6 @@ export default function Inventario() {
     limit: 10,
     type: "",
     search: "",
-    warehouseId: "",
   });
   const [pagination, setPagination] = useState({
     total: 0,
@@ -55,8 +56,7 @@ export default function Inventario() {
   const [formData, setFormData] = useState({
     productoId: "",
     cantidad: "",
-    almacenOrigenId: "1", // Default Principal
-    almacenDestinoId: "",
+    almacenOrigenId: "1",
     motivo: "",
     observaciones: "",
   });
@@ -108,7 +108,7 @@ export default function Inventario() {
   const handleSubmit = async () => {
     try {
       if (!formData.productoId || !formData.cantidad) {
-        return alert("Por favor complete los campos requeridos");
+        return toast.warning("Por favor complete los campos requeridos");
       }
 
       const payload = {
@@ -119,13 +119,13 @@ export default function Inventario() {
 
       if (modalType === "transferencia") {
         if (!formData.almacenDestinoId)
-          return alert("Seleccione almacén destino");
+          return toast.warning("Seleccione almacén destino");
         await inventoryService.createTransfer(payload);
       } else {
         await inventoryService.createMovement(payload);
       }
 
-      alert("Movimiento registrado correctamente");
+      toast.success("Movimiento registrado correctamente");
       setIsModalOpen(false);
       setFormData({
         productoId: "",
@@ -139,7 +139,9 @@ export default function Inventario() {
       fetchInitialData(); // Update stats
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Error al registrar movimiento");
+      toast.error(
+        error.response?.data?.message || "Error al registrar movimiento",
+      );
     }
   };
 
@@ -212,7 +214,7 @@ export default function Inventario() {
             <div className="text-2xl font-bold text-gray-900">
               -{stats.salidasHoy}
             </div>
-            <div className="text-xs font-semibold text-danger-600">
+            <div className="text-xs font-semibold text-primary-600">
               unidades
             </div>
           </div>
@@ -249,60 +251,11 @@ export default function Inventario() {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          {
-            id: "ingreso",
-            label: "Ingreso de Stock",
-            icon: ArrowUp,
-            color: "success",
-          },
-          {
-            id: "salida",
-            label: "Salida de Stock",
-            icon: ArrowDown,
-            color: "warning",
-          },
-          {
-            id: "ajuste",
-            label: "Ajuste de Inventario",
-            icon: FileText,
-            color: "gray",
-          },
-          {
-            id: "transferencia",
-            label: "Transferencia",
-            icon: ArrowRightLeft,
-            color: "info",
-          },
-        ].map((action) => (
-          <button
-            key={action.id}
-            onClick={() => openModal(action.id)}
-            className="flex flex-col items-center gap-3 p-6 bg-white border border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-md hover:-translate-y-1 transition-all group"
-          >
-            <div
-              className={`w-14 h-14 rounded-full bg-${action.color}-50 text-${action.color}-600 flex items-center justify-center group-hover:scale-110 transition-transform`}
-            >
-              <action.icon size={28} />
-            </div>
-            <span className="font-bold text-gray-700 text-sm">
-              {action.label}
-            </span>
-          </button>
-        ))}
-      </div>
-
       {/* Filters & Table */}
       <div className="space-y-4">
         {/* Filters */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-gray-200">
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:border-primary-500">
-              <option value="">Todos los almacenes</option>
-              <option value="principal">Almacén Principal</option>
-            </select>
             <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:border-primary-500">
               <option value="">Todos los movimientos</option>
               <option value="ingreso">Ingresos</option>
@@ -345,7 +298,6 @@ export default function Inventario() {
                   <th className="px-6 py-4">Tipo</th>
                   <th className="px-6 py-4">Producto</th>
                   <th className="px-6 py-4">Cantidad</th>
-                  <th className="px-6 py-4">Almacén</th>
                   <th className="px-6 py-4">Motivo</th>
                   <th className="px-6 py-4">Usuario</th>
                   <th className="px-6 py-4">Acciones</th>
@@ -400,15 +352,12 @@ export default function Inventario() {
                         mov.cantidad > 0
                           ? "text-success-600"
                           : mov.cantidad < 0
-                            ? "text-danger-600"
+                            ? "text-primary-600"
                             : "text-gray-900",
                       )}
                     >
                       {mov.cantidad > 0 ? "+" : ""}
                       {mov.cantidad}
-                    </td>
-                    <td className="px-6 py-4 text-gray-600">
-                      Almacén Principal
                     </td>
                     <td className="px-6 py-4 text-gray-600">{mov.motivo}</td>
                     <td className="px-6 py-4">
@@ -491,38 +440,31 @@ export default function Inventario() {
 
             <div className="p-6">
               {/* Type Selection */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                {["ingreso", "salida", "ajuste", "transferencia"].map(
-                  (type) => (
-                    <button
-                      key={type}
-                      onClick={() => setModalType(type)}
+              <div className="flex flex-wrap justify-center gap-3 mb-6">
+                {["ingreso", "salida", "ajuste"].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setModalType(type)}
+                    className={clsx(
+                      "flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all",
+                      modalType === type
+                        ? "border-primary-600 bg-primary-50 text-primary-700"
+                        : "border-gray-200 hover:border-primary-300 text-gray-600 hover:bg-gray-50",
+                    )}
+                  >
+                    <div
                       className={clsx(
-                        "flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all",
-                        modalType === type
-                          ? "border-primary-600 bg-primary-50 text-primary-700"
-                          : "border-gray-200 hover:border-primary-300 text-gray-600 hover:bg-gray-50",
+                        "p-2 rounded-full",
+                        modalType === type ? "bg-primary-200" : "bg-gray-100",
                       )}
                     >
-                      <div
-                        className={clsx(
-                          "p-2 rounded-full",
-                          modalType === type ? "bg-primary-200" : "bg-gray-100",
-                        )}
-                      >
-                        {type === "ingreso" && <ArrowUp size={20} />}
-                        {type === "salida" && <ArrowDown size={20} />}
-                        {type === "ajuste" && <FileText size={20} />}
-                        {type === "transferencia" && (
-                          <ArrowRightLeft size={20} />
-                        )}
-                      </div>
-                      <span className="text-xs font-bold uppercase">
-                        {type}
-                      </span>
-                    </button>
-                  ),
-                )}
+                      {type === "ingreso" && <ArrowUp size={20} />}
+                      {type === "salida" && <ArrowDown size={20} />}
+                      {type === "ajuste" && <FileText size={20} />}
+                    </div>
+                    <span className="text-xs font-bold uppercase">{type}</span>
+                  </button>
+                ))}
               </div>
 
               <div className="space-y-4">
@@ -563,37 +505,6 @@ export default function Inventario() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Almacén Origen *
-                    </label>
-                    <select
-                      name="almacenOrigenId"
-                      value={formData.almacenOrigenId}
-                      onChange={handleInputChange}
-                      className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
-                    >
-                      <option value="1">Almacén Principal</option>
-                      {/* TODO: Fetch more warehouses */}
-                    </select>
-                  </div>
-                  {modalType === "transferencia" && (
-                    <div className="animate-in fade-in slide-in-from-top-2">
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Almacén Destino *
-                      </label>
-                      <select
-                        name="almacenDestinoId"
-                        value={formData.almacenDestinoId}
-                        onChange={handleInputChange}
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
-                      >
-                        <option value="">Seleccionar destino</option>
-                        <option value="1">Almacén Principal</option>
-                        {/* TODO: Add logic to list other warehouses */}
-                      </select>
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
                       Motivo *
                     </label>
                     <select
@@ -603,11 +514,17 @@ export default function Inventario() {
                       className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
                     >
                       <option value="">Seleccionar motivo</option>
-                      <option value="compra">Compra a proveedor</option>
-                      <option value="venta">Venta POS</option>
-                      <option value="ajuste">Ajuste de inventario</option>
-                      <option value="transferencia">Transferencia</option>
-                      <option value="otro">Otro</option>
+                      <option value="Se realizo una compra a proveedor">
+                        Se realizo una compra a proveedor
+                      </option>
+                      <option value="Se realizo una venta">
+                        Se realizo una venta
+                      </option>
+                      <option value="Aumento de Stock">Aumento de Stock</option>
+                      <option value="Ajuste de inventario">
+                        Ajuste de inventario
+                      </option>
+                      <option value="Otro">Otro</option>
                     </select>
                   </div>
                 </div>
@@ -720,7 +637,7 @@ export default function Inventario() {
                       "text-lg font-bold font-mono",
                       selectedMovement.cantidad > 0
                         ? "text-success-600"
-                        : "text-danger-600",
+                        : "text-primary-600",
                     )}
                   >
                     {selectedMovement.cantidad > 0 ? "+" : ""}
@@ -729,10 +646,10 @@ export default function Inventario() {
                 </div>
                 <div>
                   <span className="text-xs font-bold text-gray-400 uppercase">
-                    Almacén
+                    Sucursal
                   </span>
                   <div className="text-sm font-semibold text-gray-700">
-                    Almacén Principal
+                    Única
                   </div>
                 </div>
               </div>

@@ -511,11 +511,11 @@ export default function Sucursales() {
                   Cajas
                 </div>
               </div>
-              <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 text-center">
-                <div className="text-xl font-bold text-orange-700">
+              <div className="bg-primary-50 p-3 rounded-xl border border-primary-100 text-center">
+                <div className="text-xl font-bold text-primary-700">
                   {selectedBranch.employees}
                 </div>
-                <div className="text-[10px] font-bold text-orange-400 uppercase tracking-wide">
+                <div className="text-[10px] font-bold text-primary-400 uppercase tracking-wide">
                   Empleados
                 </div>
               </div>
@@ -684,9 +684,9 @@ export default function Sucursales() {
                       </div>
                       <div className="text-lg text-gray-700">356</div>
                     </th>
-                    <th className="px-6 py-4 text-center bg-orange-50/50">
+                    <th className="px-6 py-4 text-center bg-primary-50/50">
                       <div className="text-xs uppercase text-gray-500">Sur</div>
-                      <div className="text-lg text-orange-700">464</div>
+                      <div className="text-lg text-primary-700">464</div>
                     </th>
                     <th className="px-6 py-4 text-center bg-gray-100">
                       Diferencia Max
@@ -714,7 +714,7 @@ export default function Sucursales() {
                         <td className="px-6 py-4 text-center font-mono text-gray-600">
                           {row.branches[2]}
                         </td>
-                        <td className="px-6 py-4 text-center bg-orange-50/10 font-mono text-gray-600">
+                        <td className="px-6 py-4 text-center bg-primary-50/10 font-mono text-gray-600">
                           {row.branches[3]}
                         </td>
                         <td className="px-6 py-4 text-center bg-gray-50 font-bold text-gray-800">

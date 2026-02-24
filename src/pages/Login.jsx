@@ -89,8 +89,8 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Error Message */}
             {error && (
-              <div className="bg-danger-500/20 border border-danger-500/50 text-danger-300 px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                <div className="w-2 h-2 bg-danger-500 rounded-full animate-pulse"></div>
+              <div className="bg-primary-500/20 border border-primary-500/50 text-white px-4 py-3 rounded-lg text-sm flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></div>
                 {error}
               </div>
             )}

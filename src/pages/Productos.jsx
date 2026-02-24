@@ -20,8 +20,10 @@ import clsx from "clsx";
 import { productService } from "../services/productService";
 import { categoryService } from "../services/categoryService";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 export default function Productos() {
+  const toast = useToast();
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState("grid");
   const [products, setProducts] = useState([]);
@@ -141,21 +143,22 @@ export default function Productos() {
 
       // We need to ensure numbers are handled correctly by backend (it does parseFloat/parseInt)
       // But we must append user context if we were doing it via spread before.
-      if (user?.sucursalId) data.append("sucursalId", user.sucursalId);
       if (user?.id) data.append("usuarioId", user.id);
 
       if (selectedProduct) {
         await productService.update(selectedProduct.id, data);
+        toast.success("Producto actualizado correctamente");
         await fetchProducts();
         setIsModalOpen(false);
       } else {
         await productService.create(data);
+        toast.success("Producto creado correctamente");
         await fetchProducts();
         setIsModalOpen(false);
       }
     } catch (error) {
       console.error("Error saving product:", error);
-      alert(error.message || "Error al guardar producto");
+      toast.error(error.message || "Error al guardar producto");
     }
   };
 
@@ -163,12 +166,13 @@ export default function Productos() {
     try {
       if (selectedProduct) {
         await productService.delete(selectedProduct.id);
+        toast.success("Producto eliminado correctamente");
         await fetchProducts();
         setIsDeleteModalOpen(false);
       }
     } catch (error) {
       console.error("Error deleting:", error);
-      alert("Error al eliminar");
+      toast.error("Error al eliminar");
     }
   };
 
@@ -238,7 +242,7 @@ export default function Productos() {
   const getStockStatus = (product) => {
     const stock = getStock(product);
     if (stock === 0)
-      return { label: "Agotado", color: "bg-red-100 text-red-700" };
+      return { label: "Agotado", color: "bg-primary-100 text-primary-700" };
     if (stock <= product.stockMinimo)
       return { label: "Bajo Stock", color: "bg-amber-100 text-amber-700" };
     return { label: "En Stock", color: "bg-emerald-100 text-emerald-700" };
@@ -287,65 +291,65 @@ export default function Productos() {
       </header>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-              <Package size={24} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+              <Package size={20} />
             </div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
               Total
             </span>
           </div>
-          <div className="text-3xl font-extrabold text-gray-900 mb-1">
+          <div className="text-2xl font-extrabold text-gray-900 leading-tight">
             {totalProducts}
           </div>
-          <p className="text-sm text-gray-500">Productos registrados</p>
+          <p className="text-[11px] text-gray-500">Productos</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
-              <Layers size={24} />
+        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+              <Layers size={20} />
             </div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
               Categorías
             </span>
           </div>
-          <div className="text-3xl font-extrabold text-gray-900 mb-1">
+          <div className="text-2xl font-extrabold text-gray-900 leading-tight">
             {activeCategories}
           </div>
-          <p className="text-sm text-gray-500">Categorías activas</p>
+          <p className="text-[11px] text-gray-500">Categorías activas</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-              <AlertTriangle size={24} />
+        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+              <AlertTriangle size={20} />
             </div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
               Atención
             </span>
           </div>
-          <div className="text-3xl font-extrabold text-gray-900 mb-1">
+          <div className="text-2xl font-extrabold text-gray-900 leading-tight">
             {lowStockCount}
           </div>
-          <p className="text-sm text-gray-500">Stock bajo o agotado</p>
+          <p className="text-[11px] text-gray-500">Bajo o agotado</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-              <Clock size={24} />
+        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+              <Clock size={20} />
             </div>
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
               Estado
             </span>
           </div>
-          <div className="text-3xl font-extrabold text-gray-900 mb-1">
+          <div className="text-2xl font-extrabold text-gray-900 leading-tight">
             Activo
           </div>
-          <p className="text-sm text-gray-500">Sistema en línea</p>
+          <p className="text-[11px] text-gray-500">Sistema en línea</p>
         </div>
       </div>
 
@@ -393,18 +397,18 @@ export default function Productos() {
 
       {/* Product List/Grid */}
       {viewMode === "grid" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
           {filteredProducts.map((product) => {
             const stockStatus = getStockStatus(product);
             return (
               <div
                 key={product.id}
-                className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all group hover:-translate-y-1"
+                className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all group hover:-translate-y-1 flex flex-col"
               >
-                <div className="relative h-48 bg-gray-100 flex items-center justify-center p-4">
+                <div className="relative h-32 bg-gray-100 flex items-center justify-center p-3">
                   <div
                     className={clsx(
-                      "absolute top-3 left-3 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide z-10",
+                      "absolute top-2 left-2 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide z-10 shadow-sm",
                       stockStatus.color,
                     )}
                   >
@@ -418,57 +422,56 @@ export default function Productos() {
                     />
                   ) : (
                     <Package
-                      size={48}
+                      size={32}
                       className="text-gray-300 group-hover:text-primary-200 transition-colors"
                     />
                   )}
                 </div>
-                <div className="p-4">
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                <div className="p-3 flex-1 flex flex-col">
+                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5 truncate">
                     {product.categoria?.nombre || "Sin Categoría"}
+                    {product.marca && ` • ${product.marca}`}
                   </div>
-                  <h3 className="font-bold text-gray-900 leading-tight mb-2 line-clamp-2 min-h-[2.5em]">
+                  <h3 className="font-bold text-gray-900 leading-tight mb-1 text-xs line-clamp-2 min-h-[2.4em]">
                     {product.nombre}
                   </h3>
-                  <div className="flex justify-between items-center text-xs text-gray-500 mb-3 font-mono">
+                  <div className="flex justify-between items-center text-[10px] text-gray-400 mb-2 font-mono">
                     <span>{product.codigoInterno}</span>
                     <span
                       className={clsx(
                         "font-bold",
                         getStock(product) <= product.stockMinimo
                           ? "text-amber-600"
-                          : "text-gray-500",
+                          : "text-gray-400",
                       )}
                     >
-                      Stock: {getStock(product)} {product.unidadMedida}
+                      {getStock(product)} {product.unidadMedida.substring(0, 3)}
+                      .
                     </span>
                   </div>
-                  <div className="flex justify-between items-end mb-4">
+                  <div className="mt-auto pt-2 border-t border-gray-100 flex justify-between items-end gap-1">
                     <div className="flex flex-col">
-                      <span className="text-[10px] text-gray-400 font-semibold">
-                        Costo
+                      <span className="text-[9px] text-gray-400 font-semibold leading-none mb-0.5">
+                        Bs. {Number(product.precioCompra).toFixed(1)}
                       </span>
-                      <span className="text-xs font-mono text-gray-500">
-                        Bs. {Number(product.precioCompra).toFixed(2)}
+                      <span className="text-base font-black text-primary-600 font-mono leading-none">
+                        {Number(product.precioVenta).toFixed(2)}
                       </span>
                     </div>
-                    <span className="text-xl font-bold text-primary-600 font-mono">
-                      Bs. {Number(product.precioVenta).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 pt-4 border-t border-gray-100">
-                    <button
-                      onClick={() => handleOpenEdit(product)}
-                      className="flex items-center justify-center py-2 rounded bg-gray-50 text-gray-600 hover:bg-primary-50 hover:text-primary-600 transition-colors"
-                    >
-                      <Edit3 size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleOpenDelete(product)}
-                      className="flex items-center justify-center py-2 rounded bg-gray-50 text-gray-600 hover:bg-danger-50 hover:text-danger-600 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => handleOpenEdit(product)}
+                        className="p-1.5 rounded bg-gray-50 text-gray-400 hover:bg-primary-50 hover:text-primary-600 transition-colors"
+                      >
+                        <Edit3 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleOpenDelete(product)}
+                        className="p-1.5 rounded bg-gray-50 text-gray-400 hover:bg-primary-50 hover:text-primary-600 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -510,8 +513,16 @@ export default function Productos() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
+                        <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] font-bold uppercase tracking-wide">
                           {product.categoria?.nombre || "Sin Categoría"}
+                          {product.marca && (
+                            <span className="text-gray-400 mx-1">/</span>
+                          )}
+                          {product.marca && (
+                            <span className="text-primary-600">
+                              {product.marca}
+                            </span>
+                          )}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -540,7 +551,7 @@ export default function Productos() {
                           </button>
                           <button
                             onClick={() => handleOpenDelete(product)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-danger-600 hover:bg-danger-50 transition-colors"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -791,7 +802,7 @@ export default function Productos() {
           ></div>
           <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95">
             <div className="p-6 text-center">
-              <div className="w-16 h-16 bg-danger-100 text-danger-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle size={32} />
               </div>
               <h2 className="text-xl font-bold text-gray-900 mb-2">
@@ -813,7 +824,7 @@ export default function Productos() {
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="flex-1 py-2.5 bg-danger-600 text-white font-bold rounded-lg hover:bg-danger-700 transition-colors"
+                  className="flex-1 py-2.5 bg-primary-600 text-white font-bold rounded-lg hover:bg-primary-700 transition-colors"
                 >
                   Eliminar
                 </button>

@@ -1,3 +1,5 @@
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Search,
   Bell,
@@ -13,6 +15,7 @@ import {
   CheckCircle,
   Clock,
   Info,
+  RefreshCw,
 } from "lucide-react";
 import {
   AreaChart,
@@ -24,107 +27,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import clsx from "clsx";
-
-const salesData = [
-  { name: "Lun", sales: 4000 },
-  { name: "Mar", sales: 3000 },
-  { name: "Mie", sales: 2000 },
-  { name: "Jue", sales: 2780 },
-  { name: "Vie", sales: 1890 },
-  { name: "Sab", sales: 2390 },
-  { name: "Dom", sales: 3490 },
-];
-
-const topProducts = [
-  {
-    rank: 1,
-    name: "Cerveza Paceña 620ml",
-    category: "Cervezas",
-    sales: 143,
-    percentage: 85,
-  },
-  {
-    rank: 2,
-    name: "Singani Rujero 750ml",
-    category: "Licores",
-    sales: 98,
-    percentage: 65,
-  },
-  {
-    rank: 3,
-    name: "Vino Kohlberg Tinto",
-    category: "Vinos",
-    sales: 76,
-    percentage: 50,
-  },
-  {
-    rank: 4,
-    name: "Ron Santa Teresa",
-    category: "Licores",
-    sales: 64,
-    percentage: 42,
-  },
-  {
-    rank: 5,
-    name: "Whisky Johnnie Walker",
-    category: "Whisky",
-    sales: 52,
-    percentage: 35,
-  },
-];
-
-const transactions = [
-  {
-    id: 1,
-    title: "Venta #1247",
-    time: "Hace 5 minutos",
-    amount: "+Bs. 85.00",
-    type: "sale",
-    icon: DollarSign,
-  },
-  {
-    id: 2,
-    title: "Ingreso de stock",
-    time: "Hace 2 horas",
-    amount: "+150 unid.",
-    type: "income",
-    icon: Package,
-  },
-  {
-    id: 3,
-    title: "Venta #1246",
-    time: "Hace 3 horas",
-    amount: "+Bs. 120.00",
-    type: "sale",
-    icon: DollarSign,
-  },
-  {
-    id: 4,
-    title: "Ajuste de inventario",
-    time: "Hace 5 horas",
-    amount: "-12 unid.",
-    type: "adjustment",
-    icon: AlertTriangle,
-  },
-];
-
-const alerts = [
-  {
-    type: "warning",
-    title: "Stock bajo en 23 productos",
-    message: "Se recomienda realizar pedido de reabastecimiento",
-  },
-  {
-    type: "info",
-    title: "Reporte quincenal disponible",
-    message: "Período del 01/02 al 15/02/2026",
-  },
-  {
-    type: "success",
-    title: "Respaldo completado",
-    message: "Último respaldo: Hoy a las 03:00",
-  },
-];
+import dashboardService from "../services/dashboardService";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
+import { useAuth } from "../context/AuthContext";
 
 const StatCard = ({
   title,
@@ -133,67 +39,232 @@ const StatCard = ({
   isPositive,
   icon: Icon,
   colorClass,
+  loading,
 }) => (
-  <div className="bg-white p-6 rounded-xl border border-gray-200 flex gap-6 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
+  <div className="bg-white p-4 rounded-xl border border-gray-200 flex gap-4 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
     <div
       className={clsx(
-        "absolute top-0 left-0 right-0 h-[3px] opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-transparent via-current to-transparent",
+        "absolute top-0 left-0 right-0 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-transparent via-current to-transparent",
         colorClass,
       )}
     ></div>
     <div
       className={clsx(
-        "w-14 h-14 rounded-md flex items-center justify-center shrink-0 bg-opacity-10",
+        "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-opacity-10",
         colorClass.replace("text-", "bg-").replace("500", "500/10"),
         colorClass,
       )}
     >
-      <Icon size={24} />
+      <Icon size={20} />
     </div>
-    <div className="flex-1">
-      <div className="text-sm text-gray-600 font-medium mb-1">{title}</div>
-      <div className="text-2xl font-extrabold text-gray-900 mb-2 tracking-tight">
-        {value}
+    <div className="flex-1 min-w-0">
+      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">
+        {title}
       </div>
-      <div
-        className={clsx(
-          "flex items-center gap-1 text-sm font-semibold",
-          isPositive ? "text-success-600" : "text-danger-600",
-        )}
-      >
-        {isPositive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-        {change}
-      </div>
+      {loading ? (
+        <div className="h-7 w-20 bg-gray-100 animate-pulse rounded mb-1"></div>
+      ) : (
+        <div className="text-xl font-black text-gray-900 mb-1 tracking-tight leading-none">
+          {value}
+        </div>
+      )}
+      {loading ? (
+        <div className="h-3 w-12 bg-gray-50 animate-pulse rounded"></div>
+      ) : (
+        <div
+          className={clsx(
+            "flex items-center gap-1 text-[11px] font-bold",
+            isPositive ? "text-success-600" : "text-primary-600",
+          )}
+        >
+          {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+          {change}
+        </div>
+      )}
     </div>
   </div>
 );
 
 export default function Dashboard() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [period, setPeriod] = useState("semana");
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const notificationRef = useRef(null);
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const fetchData = async (currentPeriod) => {
+    try {
+      setLoading(true);
+      const response = await dashboardService.getDashboardData(
+        currentPeriod || period,
+      );
+      // El servicio 'api.js' ya devuelve response.json() directamente
+      setData(response);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      setError("No se pudo cargar la información del dashboard.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData(period);
+    // Auto refresh every 5 minutes
+    const interval = setInterval(() => fetchData(period), 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [period]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target)
+      ) {
+        setIsNotificationsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Helper safe date formatter
+  const formatTime = (timeStr) => {
+    try {
+      const date = new Date(timeStr);
+      if (isNaN(date.getTime())) return "Recientemente";
+      return formatDistanceToNow(date, {
+        addSuffix: true,
+        locale: es,
+      });
+    } catch (err) {
+      return "Recientemente";
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="p-4 bg-danger-50 text-primary-600 rounded-full">
+          <AlertTriangle size={32} />
+        </div>
+        <p className="text-gray-600 font-medium">{error}</p>
+        <button
+          onClick={fetchData}
+          className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors font-semibold"
+        >
+          <RefreshCw size={18} />
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  const {
+    stats,
+    salesChart,
+    topProducts,
+    transactions,
+    alerts,
+    lowStockProducts,
+  } = data || {};
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
         <div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 tracking-tighter">
             Dashboard
           </h1>
-          <p className="text-gray-500 mt-1">Resumen general del sistema</p>
+          <div className="flex items-center gap-2 text-gray-400 text-xs mt-1 font-medium">
+            <Activity size={14} className="text-primary-500" />
+            <span>Resumen general del sistema</span>
+          </div>
         </div>
         <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg flex-1 md:w-[300px] focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/10 transition-all shadow-sm">
-            <Search size={18} className="text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar productos..."
-              className="border-none outline-none text-sm w-full text-gray-900 placeholder:text-gray-400"
-            />
+          <div
+            className="flex items-center gap-2 relative"
+            ref={notificationRef}
+          >
+            <button
+              onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+              className="relative p-2 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:border-gray-300 transition-colors"
+            >
+              <Bell size={20} className="text-gray-600" />
+              {lowStockProducts?.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-gray-50">
+                  {lowStockProducts.length}
+                </span>
+              )}
+            </button>
+
+            {/* Notifications Dropdown */}
+            {isNotificationsOpen && (
+              <div className="absolute right-0 top-12 w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200">
+                <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center rounded-t-xl">
+                  <h3 className="font-bold text-gray-900 text-sm">
+                    Notificaciones
+                  </h3>
+                  <span className="text-[10px] font-bold bg-primary-100 text-primary-600 px-2 py-0.5 rounded-full uppercase">
+                    {lowStockProducts?.length || 0} Alertas
+                  </span>
+                </div>
+                <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                  {lowStockProducts?.length > 0 ? (
+                    lowStockProducts.map((product) => (
+                      <div
+                        key={product.id}
+                        className="p-4 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="mt-1 p-2 bg-warning-50 text-warning-600 rounded-lg">
+                            <Package size={16} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-gray-900 truncate uppercase">
+                              {product.nombre}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Stock crítico:{" "}
+                              <span className="text-primary-600 font-bold">
+                                {product.stockActual}
+                              </span>{" "}
+                              de {product.stockMinimo}
+                            </p>
+                            <Link
+                              to="/productos"
+                              className="text-xs font-bold text-primary-600 hover:underline mt-2 inline-block"
+                              onClick={() => setIsNotificationsOpen(false)}
+                            >
+                              Reabastecer ahora
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-gray-500 text-sm">
+                      No hay alertas de stock bajo
+                    </div>
+                  )}
+                </div>
+                <div className="p-3 border-t border-gray-100 text-center">
+                  <Link
+                    to="/reportes"
+                    className="text-xs font-bold text-gray-500 hover:text-primary-600 transition-colors"
+                    onClick={() => setIsNotificationsOpen(false)}
+                  >
+                    Ver todos los reportes
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
-          <button className="relative p-2 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:border-gray-300 transition-colors">
-            <Bell size={20} className="text-gray-600" />
-            <span className="absolute -top-1 -right-1 bg-primary-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-gray-50">
-              3
-            </span>
-          </button>
         </div>
       </header>
 
@@ -201,59 +272,76 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard
           title="Ventas del Día"
-          value="Bs. 4,250.00"
-          change="+12.5%"
-          isPositive={true}
+          value={
+            stats?.salesToday?.value
+              ? `Bs. ${stats.salesToday.value}`
+              : "Bs. 0.00"
+          }
+          change={stats?.salesToday?.change}
+          isPositive={stats?.salesToday?.isPositive}
           icon={DollarSign}
           colorClass="text-primary-500"
+          loading={loading}
         />
         <StatCard
           title="Productos en Stock"
-          value="1,247"
-          change="95% capacidad"
-          isPositive={true} // Neural in original, but using positive for now
+          value={stats?.stockTotal?.value}
+          change={stats?.stockTotal?.change}
+          isPositive={stats?.stockTotal?.isPositive}
           icon={Package}
           colorClass="text-success-500"
+          loading={loading}
         />
         <StatCard
           title="Stock Bajo"
-          value="23"
-          change="Requiere atención"
-          isPositive={false}
+          value={stats?.lowStock?.value}
+          change={stats?.lowStock?.change}
+          isPositive={stats?.lowStock?.isPositive}
           icon={AlertTriangle}
           colorClass="text-warning-500"
+          loading={loading}
         />
         <StatCard
           title="Transacciones Hoy"
-          value="87"
-          change="+8.3%"
-          isPositive={true}
+          value={stats?.transactionsToday?.value}
+          change={stats?.transactionsToday?.change}
+          isPositive={stats?.transactionsToday?.isPositive}
           icon={Activity}
           colorClass="text-info-500"
+          loading={loading}
         />
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Sales Chart */}
-        <div className="xl:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <div className="xl:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
+          {loading && (
+            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
+              <RefreshCw size={32} className="text-primary-500 animate-spin" />
+            </div>
+          )}
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-gray-900">
               Ventas de los Últimos 7 Días
             </h3>
-            <select className="px-3 py-1.5 border border-gray-200 rounded-md text-sm font-medium text-gray-700 bg-white hover:border-primary-500 focus:outline-none transition-colors cursor-pointer">
-              <option>Última semana</option>
-              <option>Último mes</option>
-              <option>Último trimestre</option>
+            <select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className="px-3 py-1.5 border border-gray-200 rounded-md text-sm font-medium text-gray-700 bg-white hover:border-primary-500 focus:outline-none transition-colors cursor-pointer"
+            >
+              <option value="semana">Última semana</option>
+              <option value="mes">Último mes</option>
+              <option value="trimestre">Último trimestre</option>
             </select>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={salesData}>
+              <AreaChart data={salesChart || []}>
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#E63946" stopOpacity={0.1} />
-                    <stop offset="95%" stopColor="#E63946" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.1} />
+                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -281,14 +369,17 @@ export default function Dashboard() {
                     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
                   }}
                   itemStyle={{ color: "#111827", fontWeight: 600 }}
+                  labelStyle={{ color: "#6B7280", marginBottom: "4px" }}
+                  formatter={(val) => [`Bs. ${val}`, "Ventas"]}
                 />
                 <Area
                   type="monotone"
                   dataKey="sales"
-                  stroke="#E63946"
+                  stroke="#0ea5e9"
                   strokeWidth={3}
                   fillOpacity={1}
                   fill="url(#colorSales)"
+                  animationDuration={1500}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -296,17 +387,19 @@ export default function Dashboard() {
         </div>
 
         {/* Top Products */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
+          {loading && (
+            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
+              <RefreshCw size={32} className="text-primary-500 animate-spin" />
+            </div>
+          )}
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-gray-900">
               Productos Más Vendidos
             </h3>
-            <button className="text-sm font-semibold text-primary-500 hover:text-primary-600 hover:bg-primary-50 px-3 py-1.5 rounded-md transition-colors">
-              Ver todos
-            </button>
           </div>
           <div className="space-y-4">
-            {topProducts.map((product, index) => (
+            {topProducts?.map((product, index) => (
               <div
                 key={index}
                 className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-md transition-colors"
@@ -342,6 +435,11 @@ export default function Dashboard() {
                 </div>
               </div>
             ))}
+            {(!topProducts || topProducts.length === 0) && !loading && (
+              <div className="text-center py-8 text-gray-500 text-sm">
+                No hay datos disponibles
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -349,17 +447,19 @@ export default function Dashboard() {
       {/* Bottom Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Transactions */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
+          {loading && (
+            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
+              <RefreshCw size={32} className="text-primary-500 animate-spin" />
+            </div>
+          )}
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-gray-900">
               Transacciones Recientes
             </h3>
-            <button className="text-sm font-semibold text-primary-500 hover:text-primary-600 transition-colors">
-              Ver todas
-            </button>
           </div>
           <div className="space-y-4">
-            {transactions.map((tx) => (
+            {transactions?.map((tx) => (
               <div
                 key={tx.id}
                 className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-md transition-colors"
@@ -374,41 +474,56 @@ export default function Dashboard() {
                         : "bg-warning-50 text-warning-600",
                   )}
                 >
-                  <tx.icon size={16} />
+                  {tx.type === "sale" ? (
+                    <DollarSign size={16} />
+                  ) : tx.type === "income" ? (
+                    <Package size={16} />
+                  ) : (
+                    <AlertTriangle size={16} />
+                  )}
                 </div>
                 <div className="flex-1">
                   <div className="font-semibold text-sm text-gray-900">
                     {tx.title}
                   </div>
-                  <div className="text-xs text-gray-500">{tx.time}</div>
+                  <div className="text-xs text-gray-500">
+                    {formatTime(tx.time)}
+                  </div>
                 </div>
                 <div
                   className={clsx(
                     "font-bold text-sm font-mono",
                     tx.amount.startsWith("+")
                       ? "text-success-600"
-                      : "text-danger-600",
+                      : "text-primary-600",
                   )}
                 >
                   {tx.amount}
                 </div>
               </div>
             ))}
+            {(!transactions || transactions.length === 0) && !loading && (
+              <div className="text-center py-8 text-gray-500 text-sm">
+                No hay transacciones recientes
+              </div>
+            )}
           </div>
         </div>
 
         {/* Alerts */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
+          {loading && (
+            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center">
+              <RefreshCw size={32} className="text-primary-500 animate-spin" />
+            </div>
+          )}
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg font-bold text-gray-900">
               Alertas del Sistema
             </h3>
-            <button className="text-sm font-semibold text-primary-500 hover:text-primary-600 transition-colors">
-              Descartar todas
-            </button>
           </div>
           <div className="space-y-4">
-            {alerts.map((alert, index) => (
+            {alerts?.map((alert, index) => (
               <div
                 key={index}
                 className={clsx(
@@ -437,7 +552,15 @@ export default function Dashboard() {
                     {alert.message}
                   </div>
                 </div>
-                <button className="px-3 py-1 bg-white border border-current rounded text-xs font-semibold hover:bg-current hover:text-white transition-colors">
+                <button
+                  onClick={() => {
+                    if (alert.type === "warning") navigate("/productos");
+                    else if (alert.type === "success")
+                      navigate("/configuracion");
+                    else navigate("/reportes");
+                  }}
+                  className="px-3 py-1 bg-white border border-current rounded text-xs font-semibold hover:bg-current hover:text-white transition-colors"
+                >
                   {alert.type === "warning"
                     ? "Revisar"
                     : alert.type === "info"
@@ -446,6 +569,11 @@ export default function Dashboard() {
                 </button>
               </div>
             ))}
+            {(!alerts || alerts.length === 0) && !loading && (
+              <div className="text-center py-8 text-gray-500 text-sm">
+                No hay alertas activas
+              </div>
+            )}
           </div>
         </div>
       </div>

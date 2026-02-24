@@ -217,53 +217,57 @@ export default function Usuarios() {
       </header>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-500">
-              Total Usuarios
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Total
             </div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-xl font-black text-gray-900 leading-tight">
               {stats.total}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center">
-            <Users size={20} />
+          <div className="w-8 h-8 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center">
+            <Users size={18} />
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-500">
-              Administradores
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Admin
             </div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-xl font-black text-gray-900 leading-tight">
               {stats.admins}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-            <ShieldCheck size={20} />
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <ShieldCheck size={18} />
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-500">Cajeros</div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Cajeros
+            </div>
+            <div className="text-xl font-black text-gray-900 leading-tight">
               {stats.cajeros}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-success-50 text-success-600 flex items-center justify-center">
-            <Users size={20} />
+          <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+            <Users size={18} />
           </div>
         </div>
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-500">Activos</div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+              Activos
+            </div>
+            <div className="text-xl font-black text-gray-900 leading-tight">
               {stats.activos}
             </div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-warning-50 text-warning-600 flex items-center justify-center">
-            <UserCheck size={20} />
+          <div className="w-8 h-8 rounded-lg bg-success-50 text-success-600 flex items-center justify-center">
+            <UserCheck size={18} />
           </div>
         </div>
       </div>
@@ -283,16 +287,16 @@ export default function Usuarios() {
           <p className="text-gray-500">No se encontraron usuarios</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
           {users.map((user) => (
             <div
               key={user.id}
-              className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow group relative"
+              className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-all group relative flex flex-col"
             >
-              <div className="p-6 flex flex-col items-center border-b border-gray-100 pb-6">
+              <div className="p-4 flex items-center gap-4 border-b border-gray-100 bg-gray-50/30">
                 <div
                   className={clsx(
-                    "w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold mb-4",
+                    "w-12 h-12 rounded-full flex items-center justify-center text-xl font-black shrink-0 shadow-sm",
                     user.rol === "ADMINISTRADOR"
                       ? "bg-indigo-100 text-indigo-600"
                       : "bg-teal-100 text-teal-600",
@@ -300,66 +304,70 @@ export default function Usuarios() {
                 >
                   {user.nombre.charAt(0)}
                 </div>
-                <h3 className="text-lg font-bold text-gray-900">
-                  {user.nombre} {user.apellido}
-                </h3>
-                <p className="text-xs text-gray-400 font-mono">
-                  @{user.username}
-                </p>
-                <span
-                  className={clsx(
-                    "px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide mt-2",
-                    user.rol === "ADMINISTRADOR"
-                      ? "bg-indigo-50 text-indigo-700"
-                      : "bg-teal-50 text-teal-700",
-                  )}
-                >
-                  {user.rol}
-                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-bold text-gray-900 truncate">
+                    {user.nombre} {user.apellido}
+                  </h3>
+                  <p className="text-[10px] text-gray-400 font-mono truncate">
+                    @{user.username}
+                  </p>
+                  <span
+                    className={clsx(
+                      "inline-block px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider mt-1",
+                      user.rol === "ADMINISTRADOR"
+                        ? "bg-indigo-50 text-indigo-700"
+                        : "bg-teal-50 text-teal-700",
+                    )}
+                  >
+                    {user.rol === "ADMINISTRADOR" ? "ADMIN" : "CAJERO"}
+                  </span>
+                </div>
               </div>
-              <div className="p-6 space-y-3">
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Mail size={16} className="text-gray-400" /> {user.email}
+              <div className="p-4 space-y-2 flex-1">
+                <div className="flex items-center gap-2 text-[11px] text-gray-600">
+                  <Mail size={14} className="text-gray-400 shrink-0" />{" "}
+                  <span className="truncate">{user.email}</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Phone size={16} className="text-gray-400" />{" "}
-                  {user.telefono || "-"}
+                <div className="flex items-center gap-2 text-[11px] text-gray-600">
+                  <Phone size={14} className="text-gray-400 shrink-0" />{" "}
+                  <span>{user.telefono || "-"}</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Lock size={16} className="text-gray-400" /> CI: {user.cedula}
+                <div className="flex items-center gap-2 text-[11px] text-gray-600">
+                  <Lock size={14} className="text-gray-400 shrink-0" />{" "}
+                  <span>CI: {user.cedula}</span>
                 </div>
-                <div className="flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-2 mt-auto pt-2">
                   <div
                     className={clsx(
                       "w-2 h-2 rounded-full",
-                      user.activo ? "bg-success-500" : "bg-danger-500",
+                      user.activo ? "bg-success-500" : "bg-primary-500",
                     )}
                   ></div>
                   <span
                     className={clsx(
-                      "font-medium",
-                      user.activo ? "text-success-700" : "text-danger-700",
+                      "text-[10px] font-bold uppercase tracking-tight",
+                      user.activo ? "text-success-700" : "text-primary-700",
                     )}
                   >
                     {user.activo ? "Activo" : "Inactivo"}
                   </span>
                 </div>
               </div>
-              <div className="px-6 py-4 bg-gray-50 flex gap-3">
+              <div className="px-4 py-3 bg-gray-50 flex gap-2 border-t border-gray-100">
                 <button
                   onClick={() => handleOpenEdit(user)}
-                  className="flex-1 py-2 font-bold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-primary-600 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-1.5 text-[11px] font-bold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-primary-50 hover:text-primary-700 hover:border-primary-100 transition-all flex items-center justify-center gap-1.5 shadow-sm"
                 >
-                  <Edit3 size={16} /> Editar
+                  <Edit3 size={14} /> Editar
                 </button>
                 <button
                   onClick={() => {
                     setSelectedUser(user);
                     setIsDeleteModalOpen(true);
                   }}
-                  className="flex-1 py-2 font-bold text-danger-700 bg-white border border-gray-200 rounded-lg hover:bg-danger-50 hover:border-danger-200 transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-1.5 text-[11px] font-bold text-primary-700 bg-white border border-gray-200 rounded-lg hover:bg-primary-50 hover:border-primary-100 transition-all flex items-center justify-center gap-1.5 shadow-sm"
                 >
-                  <Trash2 size={16} /> Eliminar
+                  <Trash2 size={14} /> Eliminar
                 </button>
               </div>
             </div>
@@ -389,7 +397,7 @@ export default function Usuarios() {
 
             <div className="overflow-y-auto p-6 space-y-4">
               {error && (
-                <div className="bg-danger-50 border border-danger-200 text-danger-700 px-4 py-3 rounded-lg text-sm">
+                <div className="bg-primary-50 border border-primary-200 text-primary-700 px-4 py-3 rounded-lg text-sm">
                   {error}
                 </div>
               )}
@@ -585,7 +593,7 @@ export default function Usuarios() {
           ></div>
           <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95">
             <div className="p-6 text-center">
-              <div className="w-16 h-16 bg-danger-100 text-danger-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 size={32} />
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">
@@ -607,7 +615,7 @@ export default function Usuarios() {
                 </button>
                 <button
                   onClick={handleDelete}
-                  className="flex-1 py-2 font-bold text-white bg-danger-600 rounded-lg hover:bg-danger-700 shadow-lg shadow-danger-500/20 transition-colors"
+                  className="flex-1 py-2 font-bold text-white bg-primary-600 rounded-lg hover:bg-primary-700 shadow-lg shadow-primary-500/20 transition-colors"
                 >
                   Desactivar
                 </button>
