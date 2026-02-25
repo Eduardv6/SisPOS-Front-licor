@@ -18,13 +18,32 @@ import {
   AlertTriangle,
   CheckCircle2,
   X,
+  FileSpreadsheet,
+  Minus,
 } from "lucide-react";
+
+const MOVEMENT_REASONS = {
+  ingreso: ["Aumento de Stock", "Ajuste inventario", "Otro"],
+  salida: ["Venta", "Daño/Rotura", "Vencimiento", "Otro"],
+  ajuste: [
+    "Conteo físico",
+    "Productos dañados",
+    "Productos vencidos",
+    "Error de registro",
+    "Otro",
+  ],
+};
 import clsx from "clsx";
 import { inventoryService } from "../services/inventoryService";
+import { exportToExcel, exportToPDF } from "../utils/exportUtils";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { productService } from "../services/productService";
 import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Inventario() {
+  const { user } = useAuth();
   const toast = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState("ingreso"); // ingreso, salida, ajuste, transferencia
@@ -46,11 +65,15 @@ export default function Inventario() {
     limit: 10,
     type: "",
     search: "",
+    startDate: "",
+    endDate: "",
   });
+  const [searchTerm, setSearchTerm] = useState("");
   const [pagination, setPagination] = useState({
     total: 0,
     totalPages: 1,
   });
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -59,6 +82,7 @@ export default function Inventario() {
     almacenOrigenId: "1",
     motivo: "",
     observaciones: "",
+    tipoOperacionAjuste: "salida", // 'ingreso' o 'salida'
   });
 
   useEffect(() => {
@@ -66,8 +90,30 @@ export default function Inventario() {
   }, []);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters((prev) => ({ ...prev, search: searchTerm, page: 1 }));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
     fetchMovements();
   }, [filters]);
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+      page: 1, // Reset a página 1 al filtrar
+    }));
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setFilters((prev) => ({ ...prev, page: newPage }));
+    }
+  };
 
   const fetchInitialData = async () => {
     try {
@@ -102,7 +148,18 @@ export default function Inventario() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const newState = { ...prev, [name]: value };
+
+      // Lógica especial para motivos de ajuste
+      if (name === "motivo" && modalType === "ajuste") {
+        if (value === "Productos dañados" || value === "Productos vencidos") {
+          newState.tipoOperacionAjuste = "salida";
+        }
+      }
+
+      return newState;
+    });
   };
 
   const handleSubmit = async () => {
@@ -114,7 +171,15 @@ export default function Inventario() {
       const payload = {
         ...formData,
         tipo: modalType,
-        usuarioId: 1, // TODO: Get from auth context
+        usuarioId: user?.id,
+        operacion:
+          modalType === "ajuste"
+            ? formData.tipoOperacionAjuste === "ingreso"
+              ? "ENTRADA"
+              : "SALIDA"
+            : modalType === "ingreso"
+              ? "ENTRADA"
+              : "SALIDA",
       };
 
       if (modalType === "transferencia") {
@@ -156,6 +221,81 @@ export default function Inventario() {
     setIsDetailModalOpen(true);
   };
 
+  const fetchAllDataForExport = async () => {
+    try {
+      setLoading(true);
+      // Pedimos un límite muy alto para asegurar traer todos los datos filtrados
+      const allData = await inventoryService.getMovements({
+        ...filters,
+        limit: 10000,
+        page: 1,
+      });
+      return allData.data;
+    } catch (error) {
+      console.error("Error al obtener datos para exportar:", error);
+      toast.error("Error al preparar los datos para la exportación");
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    const allMovements = await fetchAllDataForExport();
+    if (allMovements.length === 0) return;
+
+    const dataToExport = allMovements.map((mov) => ({
+      Fecha: format(new Date(mov.fechaMovimiento), "dd/MM/yyyy HH:mm", {
+        locale: es,
+      }),
+      Tipo: mov.tipo.replace(/_/g, " "),
+      Producto: mov.producto?.nombre,
+      "Código Interno": mov.producto?.codigoInterno,
+      Cantidad: mov.cantidad,
+      Motivo: mov.motivo,
+      Usuario: mov.usuario?.nombre || "Sistema",
+      Observaciones: mov.referencia || "",
+    }));
+
+    exportToExcel(dataToExport, "movimientos-inventario");
+    setShowExportMenu(false);
+  };
+
+  const handleExportPDF = async () => {
+    const allMovements = await fetchAllDataForExport();
+    if (allMovements.length === 0) return;
+
+    const dataToExport = allMovements.map((mov) => [
+      format(new Date(mov.fechaMovimiento), "dd/MM/yyyy HH:mm", {
+        locale: es,
+      }),
+      mov.tipo.replace(/_/g, " "),
+      mov.producto?.nombre,
+      mov.producto?.codigoInterno || "-",
+      mov.cantidad,
+      mov.motivo,
+      mov.usuario?.nombre || "Sistema",
+    ]);
+
+    const columns = [
+      "Fecha",
+      "Tipo",
+      "Producto",
+      "Cód. Interno",
+      "Cant.",
+      "Motivo",
+      "Usuario",
+    ];
+
+    exportToPDF({
+      columns,
+      data: dataToExport,
+      title: "Historial de Movimientos de Inventario",
+      fileName: "reporte-inventario",
+    });
+    setShowExportMenu(false);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -175,6 +315,8 @@ export default function Inventario() {
             <input
               type="text"
               placeholder="Buscar movimientos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all w-full sm:w-64"
             />
           </div>
@@ -256,7 +398,12 @@ export default function Inventario() {
         {/* Filters */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-gray-200">
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:border-primary-500">
+            <select
+              name="type"
+              value={filters.type}
+              onChange={handleFilterChange}
+              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:border-primary-500"
+            >
               <option value="">Todos los movimientos</option>
               <option value="ingreso">Ingresos</option>
               <option value="salida">Salidas</option>
@@ -265,18 +412,55 @@ export default function Inventario() {
               <Calendar size={16} />
               <input
                 type="date"
+                name="startDate"
+                value={filters.startDate}
+                onChange={handleFilterChange}
                 className="bg-transparent border-none outline-none p-0 w-24 sm:w-auto"
               />
               <span className="text-gray-400">-</span>
               <input
                 type="date"
+                name="endDate"
+                value={filters.endDate}
+                onChange={handleFilterChange}
                 className="bg-transparent border-none outline-none p-0 w-24 sm:w-auto"
               />
             </div>
           </div>
-          <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2">
-            <Download size={16} /> Exportar
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+            >
+              <Download size={18} />
+              Exportar
+            </button>
+
+            {showExportMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowExportMenu(false)}
+                ></div>
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-2 animate-in fade-in zoom-in-95 duration-200">
+                  <button
+                    onClick={handleExportExcel}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                  >
+                    <FileSpreadsheet size={18} className="text-success-600" />
+                    <span className="font-semibold">Excel (.xlsx)</span>
+                  </button>
+                  <button
+                    onClick={handleExportPDF}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                  >
+                    <FileText size={18} className="text-primary-600" />
+                    <span className="font-semibold">PDF (.pdf)</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Table */}
@@ -286,7 +470,7 @@ export default function Inventario() {
               Historial de Movimientos
             </h3>
             <span className="text-sm text-gray-500">
-              Mostrando 5 de 342 movimientos
+              Mostrando {movements.length} de {pagination.total} movimientos
             </span>
           </div>
 
@@ -389,29 +573,24 @@ export default function Inventario() {
           {/* Pagination */}
           <div className="p-4 border-t border-gray-100 flex items-center justify-between">
             <button
-              disabled
-              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-400 cursor-not-allowed flex items-center gap-2"
+              onClick={() => handlePageChange(filters.page - 1)}
+              disabled={filters.page === 1}
+              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <ChevronLeft size={16} /> Anterior
             </button>
-            <div className="flex gap-1">
-              <button className="w-8 h-8 rounded-lg bg-primary-600 text-white font-bold text-sm flex items-center justify-center">
-                1
-              </button>
-              <button className="w-8 h-8 rounded-lg text-gray-600 font-bold text-sm flex items-center justify-center hover:bg-gray-100">
-                2
-              </button>
-              <button className="w-8 h-8 rounded-lg text-gray-600 font-bold text-sm flex items-center justify-center hover:bg-gray-100">
-                3
-              </button>
-              <div className="w-8 h-8 flex items-center justify-center text-gray-400">
-                ...
-              </div>
-              <button className="w-8 h-8 rounded-lg text-gray-600 font-bold text-sm flex items-center justify-center hover:bg-gray-100">
-                35
-              </button>
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-600">
+              Página{" "}
+              <span className="text-gray-900 font-bold">{filters.page}</span> de{" "}
+              <span className="text-gray-900 font-bold">
+                {pagination.totalPages}
+              </span>
             </div>
-            <button className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(filters.page + 1)}
+              disabled={filters.page === pagination.totalPages}
+              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
               Siguiente <ChevronRight size={16} />
             </button>
           </div>
@@ -444,7 +623,10 @@ export default function Inventario() {
                 {["ingreso", "salida", "ajuste"].map((type) => (
                   <button
                     key={type}
-                    onClick={() => setModalType(type)}
+                    onClick={() => {
+                      setModalType(type);
+                      setFormData((prev) => ({ ...prev, motivo: "" })); // Reset motivo on tab change
+                    }}
                     className={clsx(
                       "flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all",
                       modalType === type
@@ -514,19 +696,61 @@ export default function Inventario() {
                       className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
                     >
                       <option value="">Seleccionar motivo</option>
-                      <option value="Se realizo una compra a proveedor">
-                        Se realizo una compra a proveedor
-                      </option>
-                      <option value="Se realizo una venta">
-                        Se realizo una venta
-                      </option>
-                      <option value="Aumento de Stock">Aumento de Stock</option>
-                      <option value="Ajuste de inventario">
-                        Ajuste de inventario
-                      </option>
-                      <option value="Otro">Otro</option>
+                      {MOVEMENT_REASONS[modalType]?.map((reason) => (
+                        <option key={reason} value={reason}>
+                          {reason}
+                        </option>
+                      ))}
                     </select>
                   </div>
+
+                  {modalType === "ajuste" && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Tipo de Movimiento *
+                      </label>
+                      <div className="flex gap-2 p-1 bg-gray-100 rounded-lg border border-gray-200">
+                        <button
+                          type="button"
+                          disabled={
+                            formData.motivo === "Productos dañados" ||
+                            formData.motivo === "Productos vencidos"
+                          }
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              tipoOperacionAjuste: "ingreso",
+                            }))
+                          }
+                          className={clsx(
+                            "flex-1 py-1.5 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-1",
+                            formData.tipoOperacionAjuste === "ingreso"
+                              ? "bg-white text-success-600 shadow-sm"
+                              : "text-gray-500 hover:bg-gray-200 disabled:opacity-30 disabled:hover:bg-transparent",
+                          )}
+                        >
+                          <Plus size={14} /> Suma (+)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              tipoOperacionAjuste: "salida",
+                            }))
+                          }
+                          className={clsx(
+                            "flex-1 py-1.5 text-xs font-bold rounded-md transition-all flex items-center justify-center gap-1",
+                            formData.tipoOperacionAjuste === "salida"
+                              ? "bg-white text-primary-600 shadow-sm"
+                              : "text-gray-500 hover:bg-gray-200",
+                          )}
+                        >
+                          <Minus size={14} /> Resta (-)
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>

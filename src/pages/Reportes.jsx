@@ -12,6 +12,12 @@ import {
   CreditCard,
   Briefcase,
   Loader2,
+  FileSpreadsheet,
+  FileText,
+  X,
+  CheckCircle,
+  ArrowDownCircle,
+  ArrowUpCircle,
 } from "lucide-react";
 import clsx from "clsx";
 import {
@@ -22,12 +28,19 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
   AreaChart,
   Area,
+  PieChart,
+  Pie,
+  Legend,
+  LineChart,
+  Line,
 } from "recharts";
 import reportService from "../services/reportService";
 import { format } from "date-fns";
-import { es } from "date-fns/locale"; // Ensure locale ES is available or remove if not needed
+import { es } from "date-fns/locale";
+import { exportToExcel, exportToPDF } from "../utils/exportUtils";
 
 export default function Reportes() {
   const [activeTab, setActiveTab] = useState("ventas"); // ventas, productos, inventario, cajas
@@ -42,6 +55,17 @@ export default function Reportes() {
   const [productStats, setProductStats] = useState(null);
   const [inventoryStats, setInventoryStats] = useState(null);
   const [cashStats, setCashStats] = useState(null);
+
+  // UI State for exports
+  const [showExportMenu, setShowExportMenu] = useState(null); // null, 'topProducts', 'lowStock', 'cashHistory'
+  const [modalDetails, setModalDetails] = useState({
+    show: false,
+    type: "",
+    data: [],
+    title: "",
+    date: "",
+    total: 0,
+  });
 
   const fetchData = async () => {
     setLoading(true);
@@ -89,6 +113,214 @@ export default function Reportes() {
   // Helper for currency
   const formatCurrency = (val) =>
     `Bs. ${Number(val || 0).toLocaleString("es-BO", { minimumFractionDigits: 2 })}`;
+
+  // Export Handlers
+  const handleExportTopProducts = (formatType) => {
+    if (formatType === "excel") {
+      const data = topProducts.map((p, i) => ({
+        Ranking: i + 1,
+        Producto: p.name,
+        Categoría: p.category,
+        Unidades: p.units,
+        Ingresos: p.income,
+        "% Total": `${p.percent}%`,
+      }));
+      exportToExcel(data, "productos-mas-vendidos");
+    } else {
+      const columns = [
+        "#",
+        "Producto",
+        "Categoría",
+        "Unidades",
+        "Ingresos",
+        "%",
+      ];
+      const data = topProducts.map((p, i) => [
+        i + 1,
+        p.name,
+        p.category,
+        p.units,
+        formatCurrency(p.income),
+        `${p.percent}%`,
+      ]);
+      exportToPDF({
+        columns,
+        data,
+        title: "Reporte: Productos Más Vendidos",
+        fileName: "top-productos",
+      });
+    }
+    setShowExportMenu(null);
+  };
+
+  const handleExportLowStock = (formatType) => {
+    if (formatType === "excel") {
+      const data = productStats.lowStockList.map((p) => ({
+        Producto: p.name,
+        Código: p.code,
+        "Stock Actual": p.stock,
+        Mínimo: p.min,
+        Estado: p.status,
+      }));
+      exportToExcel(data, "stock-bajo");
+    } else {
+      const columns = ["Producto", "Código", "Stock", "Mín.", "Estado"];
+      const data = productStats.lowStockList.map((p) => [
+        p.name,
+        p.code,
+        p.stock,
+        p.min,
+        p.status,
+      ]);
+      exportToPDF({
+        columns,
+        data,
+        title: "Reporte: Productos con Stock Bajo",
+        fileName: "stock-bajo",
+      });
+    }
+    setShowExportMenu(null);
+  };
+
+  const handleExportCashHistory = (formatType) => {
+    if (formatType === "excel") {
+      const data = cashStats.history.map((c) => ({
+        "Caja #": c.id,
+        Apertura: format(new Date(c.openingDate), "dd/MM/yyyy HH:mm:ss", {
+          locale: es,
+        }),
+        Cierre: format(new Date(c.fullDate), "dd/MM/yyyy HH:mm:ss", {
+          locale: es,
+        }),
+        Cajero: c.cashier,
+        "Ventas Efvo": c.salesCash,
+        "Ventas QR": c.salesQr,
+        Ingresos: c.incomes,
+        Retiros: c.retiros,
+        "Total Vendido": c.sales,
+        "Saldo Sistema": c.expectedBalance,
+        Diferencia: c.diff,
+        Estado:
+          Math.abs(c.diff) < 0.1
+            ? "CUADRO PERFECTO"
+            : c.diff < 0
+              ? `FALTANTE (${formatCurrency(Math.abs(c.diff))})`
+              : `SOBRANTE (${formatCurrency(c.diff)})`,
+      }));
+      exportToExcel(data, "historial-cajas");
+    } else {
+      const columns = [
+        "Apertura",
+        "Cajero",
+        "Efvo",
+        "QR",
+        "Ing.",
+        "Ret.",
+        "Total",
+        "Saldo",
+        "Dif.",
+        "Estado",
+      ];
+      const data = cashStats.history.map((c) => [
+        format(new Date(c.openingDate), "dd/MM/yy HH:mm", { locale: es }),
+        c.cashier,
+        formatCurrency(c.salesCash),
+        formatCurrency(c.salesQr),
+        formatCurrency(c.incomes),
+        formatCurrency(c.retiros),
+        formatCurrency(c.sales),
+        formatCurrency(c.expectedBalance),
+        c.diff,
+        Math.abs(c.diff) < 0.1 ? "OK" : c.diff < 0 ? "FALTA" : "SOBRA",
+      ]);
+      exportToPDF({
+        columns,
+        data,
+        title: "Historial de Cierres de Caja Detailed",
+        fileName: "historial-cajas",
+      });
+    }
+    setShowExportMenu(null);
+  };
+
+  const DetailsModal = ({
+    isOpen,
+    onClose,
+    type,
+    data,
+    title,
+    date,
+    total,
+  }) => {
+    if (!isOpen) return null;
+    const isIncome = type === "ingreso";
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+            <div>
+              <h3 className="text-xl font-extrabold text-gray-900">{title}</h3>
+              <p className="text-sm text-gray-500 font-medium">{date}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+            {data.length > 0 ? (
+              data.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-xl border border-gray-100 flex justify-between items-center hover:border-primary-100 transition-colors"
+                >
+                  <div>
+                    <p className="font-bold text-gray-900">
+                      {item.description}
+                    </p>
+                    <p className="text-xs text-gray-500 font-medium">
+                      {format(new Date(item.date), "dd/MM/yyyy, hh:mm:ss a", {
+                        locale: es,
+                      })}
+                    </p>
+                  </div>
+                  <span
+                    className={clsx("font-bold text-lg", "text-primary-600")}
+                  >
+                    {formatCurrency(item.amount)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-8 font-medium">
+                No hay registros para mostrar.
+              </p>
+            )}
+
+            <div className="p-4 rounded-xl bg-gray-50 border-2 border-dashed border-gray-200 flex justify-between items-center">
+              <span className="font-bold text-gray-700">Total:</span>
+              <span
+                className={clsx("font-extrabold text-2xl", "text-primary-600")}
+              >
+                {formatCurrency(total)}
+              </span>
+            </div>
+          </div>
+          <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+            <button
+              onClick={onClose}
+              className="bg-white text-gray-700 px-6 py-2 rounded-xl font-bold border border-gray-200 hover:bg-gray-100 transition-colors shadow-sm"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -226,10 +458,10 @@ export default function Reportes() {
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-3 bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col h-96">
-              <h3 className="text-lg font-bold text-gray-900 mb-6">
-                Gráfico de Ventas por Día
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col h-96">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 uppercase tracking-wider text-sm opacity-70">
+                Ventas por Día
               </h3>
               <div className="flex-1 w-full min-h-0">
                 <ResponsiveContainer width="100%" height="100%">
@@ -292,6 +524,40 @@ export default function Reportes() {
                 </ResponsiveContainer>
               </div>
             </div>
+
+            <div className="xl:col-span-1 bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col h-96">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 uppercase tracking-wider text-sm opacity-70">
+                Ventas por Categoría
+              </h3>
+              <div className="flex-1 w-full min-h-0 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={dashboardStats?.salesByCategory || []}
+                      cx="50%"
+                      cy="45%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {dashboardStats?.salesByCategory?.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(val) => [formatCurrency(val), "Ventas"]}
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                      }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
 
           {/* Top Products Table */}
@@ -300,9 +566,46 @@ export default function Reportes() {
               <h3 className="font-bold text-gray-900 text-lg">
                 Productos Más Vendidos
               </h3>
-              <button className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-primary-600 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors">
-                <Download size={16} /> Exportar
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() =>
+                    setShowExportMenu(
+                      showExportMenu === "topProducts" ? null : "topProducts",
+                    )
+                  }
+                  className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-primary-600 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors border border-gray-200"
+                >
+                  <Download size={16} /> Exportar
+                </button>
+
+                {showExportMenu === "topProducts" && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowExportMenu(null)}
+                    ></div>
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-2 animate-in fade-in zoom-in-95 duration-200">
+                      <button
+                        onClick={() => handleExportTopProducts("excel")}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                      >
+                        <FileSpreadsheet
+                          size={18}
+                          className="text-success-600"
+                        />
+                        <span className="font-semibold">Excel (.xlsx)</span>
+                      </button>
+                      <button
+                        onClick={() => handleExportTopProducts("pdf")}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                      >
+                        <FileText size={18} className="text-primary-600" />
+                        <span className="font-semibold">PDF (.pdf)</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
@@ -409,15 +712,147 @@ export default function Reportes() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col min-h-[450px]">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 uppercase tracking-wider text-sm opacity-70">
+                Distribución por Categoría
+              </h3>
+              <div className="flex-1 w-full min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={productStats.distribution}
+                    margin={{ bottom: 100 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#F3F4F6"
+                    />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{
+                        fill: "#6B7280",
+                        fontSize: 10,
+                        fontWeight: 600,
+                        angle: -45,
+                        textAnchor: "end",
+                      }}
+                      interval={0}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                      }}
+                      formatter={(val) => [`${val} Productos`, "Cantidad"]}
+                    />
+                    <Bar
+                      dataKey="value"
+                      fill="#ef4444"
+                      radius={[6, 6, 0, 0]}
+                      barSize={40}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="xl:col-span-1 bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col h-[320px]">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 uppercase tracking-wider text-sm opacity-70">
+                Rotación de Productos
+              </h3>
+              <div className="flex-1 w-full min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={productStats.rotation}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#F3F4F6"
+                    />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#6B7280", fontSize: 11, fontWeight: 600 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                      }}
+                      formatter={(val) => [`${val} Productos`, "Total"]}
+                    />
+                    <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={50}>
+                      {productStats.rotation.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
             <div className="p-6 border-b border-gray-100 flex justify-between items-center">
               <h3 className="font-bold text-gray-900 text-lg flex items-center gap-2">
                 <AlertTriangle size={20} className="text-warning-500" />{" "}
                 Productos con Stock Bajo
               </h3>
-              <button className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-primary-600 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors">
-                <Download size={16} /> Exportar
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() =>
+                    setShowExportMenu(
+                      showExportMenu === "lowStock" ? null : "lowStock",
+                    )
+                  }
+                  className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-primary-600 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors border border-gray-200"
+                >
+                  <Download size={16} /> Exportar
+                </button>
+
+                {showExportMenu === "lowStock" && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowExportMenu(null)}
+                    ></div>
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-2 animate-in fade-in zoom-in-95 duration-200">
+                      <button
+                        onClick={() => handleExportLowStock("excel")}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                      >
+                        <FileSpreadsheet
+                          size={18}
+                          className="text-success-600"
+                        />
+                        <span className="font-semibold">Excel (.xlsx)</span>
+                      </button>
+                      <button
+                        onClick={() => handleExportLowStock("pdf")}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                      >
+                        <FileText size={18} className="text-primary-600" />
+                        <span className="font-semibold">PDF (.pdf)</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
@@ -521,32 +956,114 @@ export default function Reportes() {
             </div>
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
               <div>
-                <div className="flex justify-between items-start">
-                  <div className="text-sm font-medium text-gray-500 mb-1">
-                    Diferencia
-                  </div>
-                  <TrendingUp size={16} className="text-info-500" />
+                <div className="text-sm font-medium text-gray-500 mb-1">
+                  Diferencia Neta
                 </div>
-                <div className="text-2xl font-bold text-gray-900 mt-2">
-                  {inventoryStats.diferencia > 0 ? "+" : ""}
+                <div
+                  className={clsx(
+                    "text-2xl font-bold mt-2",
+                    inventoryStats.diferencia >= 0
+                      ? "text-success-600"
+                      : "text-primary-600",
+                  )}
+                >
+                  {inventoryStats.diferencia >= 0 ? "+" : ""}
                   {inventoryStats.diferencia} Unidades
                 </div>
               </div>
-              <div className="w-full h-1 bg-gray-100 mt-4 rounded-full overflow-hidden">
-                <div className="h-full bg-info-500 w-full"></div>
+              <div className="text-xs font-bold text-gray-400 mt-4 uppercase">
+                {inventoryStats.diferencia >= 0 ? "Crecimiento" : "Reducción"}
               </div>
             </div>
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
               <div>
-                <div className="flex justify-between items-start">
-                  <div className="text-sm font-medium text-gray-500 mb-1">
-                    Movimientos
-                  </div>
-                  <Briefcase size={16} className="text-primary-500" />
+                <div className="text-sm font-medium text-gray-500 mb-1">
+                  Movimientos
                 </div>
                 <div className="text-2xl font-bold text-gray-900 mt-2">
                   {inventoryStats.totalMovimientos}
                 </div>
+              </div>
+              <div className="text-xs font-bold text-gray-400 mt-4 uppercase">
+                Este Mes
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-2 bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col h-96">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 uppercase tracking-wider text-sm opacity-70">
+                Movimientos por Tipo
+              </h3>
+              <div className="flex-1 w-full min-h-0 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={inventoryStats.movementsByType}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {inventoryStats.movementsByType.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                      }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="xl:col-span-1 bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col h-96">
+              <h3 className="text-lg font-bold text-gray-900 mb-6 uppercase tracking-wider text-sm opacity-70">
+                Tendencia de Stock
+              </h3>
+              <div className="flex-1 w-full min-h-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={inventoryStats.stockTrend}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#F3F4F6"
+                    />
+                    <XAxis
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: "12px",
+                        border: "none",
+                        boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="stock"
+                      stroke="#3b82f6"
+                      strokeWidth={3}
+                      dot={{ r: 4, fill: "#3b82f6" }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>
@@ -596,85 +1113,211 @@ export default function Reportes() {
               <h3 className="font-bold text-gray-900 text-lg">
                 Historial de Cierres de Caja
               </h3>
-              <button className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-primary-600 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors">
-                <Download size={16} /> Exportar
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() =>
+                    setShowExportMenu(
+                      showExportMenu === "cashHistory" ? null : "cashHistory",
+                    )
+                  }
+                  className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-primary-600 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors border border-gray-200"
+                >
+                  <Download size={16} /> Exportar
+                </button>
+
+                {showExportMenu === "cashHistory" && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowExportMenu(null)}
+                    ></div>
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-2 animate-in fade-in zoom-in-95 duration-200">
+                      <button
+                        onClick={() => handleExportCashHistory("excel")}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                      >
+                        <FileSpreadsheet
+                          size={18}
+                          className="text-success-600"
+                        />
+                        <span className="font-semibold">Excel (.xlsx)</span>
+                      </button>
+                      <button
+                        onClick={() => handleExportCashHistory("pdf")}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                      >
+                        <FileText size={18} className="text-primary-600" />
+                        <span className="font-semibold">PDF (.pdf)</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="bg-gray-50 text-gray-500 font-semibold uppercase text-xs">
+                <thead className="bg-gray-50 text-gray-500 font-bold uppercase text-[10px] tracking-wider">
                   <tr>
-                    <th className="px-6 py-4">Fecha</th>
-                    <th className="px-6 py-4">Cajero</th>
-                    <th className="px-6 py-4 text-center">Apertura</th>
+                    <th className="px-6 py-4">APERTURA / CIERRE</th>
+                    <th className="px-6 py-4">CAJA / USUARIO</th>
                     <th className="px-6 py-4 text-center text-success-600">
-                      Ventas Efvo
+                      EFECTIVO (VENTAS)
                     </th>
                     <th className="px-6 py-4 text-center text-info-600">
-                      Ventas QR
+                      QR (VENTAS)
                     </th>
-                    <th className="px-6 py-4 text-center">Ventas Total</th>
-                    <th className="px-6 py-4 text-center">Cierre</th>
-                    <th className="px-6 py-4 text-center">Diferencia</th>
-                    <th className="px-6 py-4 text-center">Estado</th>
+                    <th className="px-6 py-4 text-center text-primary-600">
+                      INGRESOS
+                    </th>
+                    <th className="px-6 py-4 text-center text-primary-600">
+                      RETIROS
+                    </th>
+                    <th className="px-6 py-4 text-center">TOTAL VENDIDO</th>
+                    <th className="px-6 py-4 text-center">SALDO SISTEMA</th>
+                    <th className="px-6 py-4 text-center">CIERRE DE CAJA</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {cashStats.history.map((c) => (
-                    <tr
-                      key={c.id}
-                      className="hover:bg-gray-50/50 transition-colors"
-                    >
-                      <td className="px-6 py-4 font-mono text-gray-600">
-                        {c.date}
-                      </td>
-                      <td className="px-6 py-4 font-medium text-gray-900">
-                        {c.cashier}
-                      </td>
-                      <td className="px-6 py-4 text-center text-gray-600">
-                        {formatCurrency(c.open)}
-                      </td>
-                      <td className="px-6 py-4 text-center font-bold text-success-600">
-                        +{formatCurrency(c.salesCash)}
-                      </td>
-                      <td className="px-6 py-4 text-center font-bold text-info-600">
-                        +{formatCurrency(c.salesQr)}
-                      </td>
-                      <td className="px-6 py-4 text-center font-bold text-gray-900">
-                        +{formatCurrency(c.sales)}
-                      </td>
-                      <td className="px-6 py-4 text-center font-bold text-gray-900">
-                        {formatCurrency(c.close)}
-                      </td>
-                      <td
-                        className={clsx(
-                          "px-6 py-4 text-center font-bold",
-                          c.diff < 0 ? "text-primary-600" : "text-gray-400",
-                        )}
+                  {cashStats.history.map((c) => {
+                    const diffValue = parseFloat(c.diff || 0);
+                    const isPerfect = Math.abs(diffValue) < 0.1;
+                    const isFaltante = diffValue < 0;
+                    const isSobrante = diffValue > 0;
+
+                    return (
+                      <tr
+                        key={c.id}
+                        className="hover:bg-gray-50/50 transition-colors"
                       >
-                        {c.diff}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          className={clsx(
-                            "px-2 py-1 rounded text-xs font-bold uppercase",
-                            c.status === "Correcto"
-                              ? "bg-success-100 text-success-700"
-                              : "bg-primary-100 text-primary-700",
-                          )}
-                        >
-                          {c.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="px-6 py-4">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-900">
+                                {format(
+                                  new Date(c.openingDate),
+                                  "d/M/yyyy, h:mm:ss a",
+                                  { locale: es },
+                                )}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-gray-400 font-medium">
+                              Cierre:{" "}
+                              {format(
+                                new Date(c.fullDate),
+                                "d/M/yyyy, h:mm:ss a",
+                                { locale: es },
+                              )}
+                            </div>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600 uppercase">
+                              CERRADA
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="space-y-0.5">
+                            <div className="text-gray-500 font-medium">
+                              {c.cashier}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center font-bold text-gray-600">
+                          {formatCurrency(c.salesCash)}
+                        </td>
+                        <td className="px-6 py-4 text-center font-bold text-gray-600">
+                          {formatCurrency(c.salesQr)}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            onClick={() =>
+                              setModalDetails({
+                                show: true,
+                                type: "ingreso",
+                                data: c.incomeDetails || [],
+                                title: "Detalle de Ingresos",
+                                date: `Caja #${c.id} - ${c.date}`,
+                                total: c.incomes,
+                              })
+                            }
+                            className="font-bold text-primary-600 hover:underline decoration-2 underline-offset-4"
+                          >
+                            {formatCurrency(c.incomes)}
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            onClick={() =>
+                              setModalDetails({
+                                show: true,
+                                type: "retiro",
+                                data: c.withdrawalDetails || [],
+                                title: "Detalle de Retiros",
+                                date: `Caja #${c.id} - ${c.date}`,
+                                total: c.retiros,
+                              })
+                            }
+                            className="font-bold text-primary-600 hover:underline decoration-2 underline-offset-4"
+                          >
+                            {formatCurrency(c.retiros)}
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 text-center font-extrabold text-gray-900">
+                          {formatCurrency(c.sales)}
+                        </td>
+                        <td className="px-6 py-4 text-center font-extrabold text-gray-900">
+                          {formatCurrency(c.expectedBalance)}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            {isPerfect ? (
+                              <>
+                                <CheckCircle
+                                  size={20}
+                                  className="text-success-500"
+                                />
+                                <span className="text-[10px] font-extrabold text-success-600 uppercase">
+                                  CUADRO PERFECTO
+                                </span>
+                              </>
+                            ) : isFaltante ? (
+                              <>
+                                <ArrowDownCircle
+                                  size={20}
+                                  className="text-primary-500"
+                                />
+                                <span className="text-[10px] font-extrabold text-primary-600 uppercase">
+                                  FALTANTE
+                                </span>
+                                <span className="text-xs font-black text-primary-600">
+                                  {formatCurrency(Math.abs(diffValue))}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <ArrowUpCircle
+                                  size={20}
+                                  className="text-info-500"
+                                />
+                                <span className="text-[10px] font-extrabold text-info-600 uppercase">
+                                  SOBRANTE
+                                </span>
+                                <span className="text-xs font-black text-info-600">
+                                  {formatCurrency(diffValue)}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {cashStats.history.length === 0 && (
                     <tr>
                       <td
-                        colSpan={7}
-                        className="px-6 py-8 text-center text-gray-500"
+                        colSpan={9}
+                        className="px-6 py-8 text-center text-gray-500 font-medium"
                       >
-                        No hay cierres de caja registrados.
+                        No hay cierres de caja registrados en el periodo
+                        seleccionado.
                       </td>
                     </tr>
                   )}
@@ -682,6 +1325,12 @@ export default function Reportes() {
               </table>
             </div>
           </div>
+
+          <DetailsModal
+            isOpen={modalDetails.show}
+            onClose={() => setModalDetails({ ...modalDetails, show: false })}
+            {...modalDetails}
+          />
         </div>
       )}
     </div>

@@ -43,6 +43,7 @@ export default function POS() {
   const [closeAmount, setCloseAmount] = useState("");
   const [closeNotes, setCloseNotes] = useState("");
   const [closingRegister, setClosingRegister] = useState(false);
+  const [checkingRegister, setCheckingRegister] = useState(true);
 
   // Cash Movement State
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
@@ -113,21 +114,25 @@ export default function POS() {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchOpenRegister = async () => {
       try {
         const res = await cashRegisterService.getAll();
+        if (!isMounted) return;
+
         const registers = res.data || [];
-        // Find open register for current user (or any open if user check is loose)
         const myRegister = registers.find((c) => c.estado === "ABIERTA");
+
         if (myRegister) {
           setOpenRegisterId(myRegister.id);
           try {
-            // Get details to calculate current cash
             const detailRes = await cashRegisterService.getDetail(
               myRegister.id,
             );
+            if (!isMounted) return;
+
             const detail = detailRes;
-            // Calculate initial + movements
             let calc = parseFloat(detail.montoInicial || 0);
             if (detail.movimientos) {
               detail.movimientos.forEach((m) => {
@@ -142,21 +147,22 @@ export default function POS() {
             setCurrentCash(calc);
           } catch (e) {
             console.error(e);
-            // Fallback to basic init if details fail
             setCurrentCash(parseFloat(myRegister.montoInicial || 0));
           }
         } else {
-          // No open register found, redirect to Apertura de Caja
           navigate("/apertura-caja");
         }
       } catch (err) {
         console.error("Error fetching open register", err);
+      } finally {
+        if (isMounted) setCheckingRegister(false);
       }
     };
+
     const fetchSettings = async () => {
       try {
         const data = await settingService.getSettings();
-        if (Object.keys(data).length > 0) {
+        if (isMounted && Object.keys(data).length > 0) {
           setSettings((prev) => ({ ...prev, ...data }));
         }
       } catch (err) {
@@ -166,7 +172,11 @@ export default function POS() {
 
     fetchOpenRegister();
     fetchSettings();
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
 
   const handleCloseRegister = async () => {
     if (!openRegisterId) return;
@@ -208,6 +218,7 @@ export default function POS() {
   const [loadingClients, setLoadingClients] = useState(false);
 
   const [discount, setDiscount] = useState(0);
+  const [clientDiscountPercent, setClientDiscountPercent] = useState(0); // % de descuento del cliente
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
   const [tempDiscount, setTempDiscount] = useState("");
   const [isExpressMode, setIsExpressMode] = useState(false);
@@ -310,11 +321,15 @@ export default function POS() {
   const clearCart = () => {
     setCart([]);
     setSelectedClient(null);
+    setClientDiscountPercent(0);
     setDiscount(0);
     setTempDiscount("");
     setReceivedAmount("");
     setClientSearch("");
     setPaymentMethod("EFECTIVO");
+    setExpressData({ nombre: "", ciNit: "" });
+    setIsExpressMode(false);
+    setSearchQuery("");
   };
 
   // Totals
@@ -322,8 +337,10 @@ export default function POS() {
     (sum, item) => sum + Number(item.precioVenta) * item.quantity,
     0,
   );
-  // discount is state
-  const total = Math.max(0, subtotal - discount);
+  // Descuento del cliente (porcentual) + descuento manual (absoluto)
+  const clientDiscountAmount = subtotal * (clientDiscountPercent / 100);
+  const totalDiscount = clientDiscountAmount + discount;
+  const total = Math.max(0, subtotal - totalDiscount);
 
   // Payment Logic
   const change = (parseFloat(receivedAmount) || 0) - total;
@@ -357,7 +374,7 @@ export default function POS() {
         })),
         metodoPago: paymentMethod,
         clienteId: selectedClient ? selectedClient.id : null,
-        descuento: parseFloat(discount) || 0,
+        descuento: parseFloat(totalDiscount) || 0,
         montoRecibido: parseFloat(receivedAmount) || 0,
       };
 
@@ -380,7 +397,7 @@ export default function POS() {
         fecha: new Date().toISOString(),
         items: cart,
         subtotal: subtotal,
-        descuento: parseFloat(discount) || 0,
+        descuento: parseFloat(totalDiscount) || 0,
         total: total,
         cambio: res.cambio,
         usuario: user?.nombre
@@ -413,6 +430,21 @@ export default function POS() {
       return GlassWater;
     return CircleDashed;
   };
+
+  if (checkingRegister) {
+    return (
+      <div className="h-[calc(100vh-64px)] flex flex-col items-center justify-center bg-white rounded-xl border border-gray-200 shadow-sm">
+        <Loader2 size={48} className="animate-spin text-primary-600 mb-4" />
+        <h2 className="text-xl font-bold text-gray-900">Verificando Caja</h2>
+        <p className="text-gray-500 mt-2">Por favor espere un momento...</p>
+      </div>
+    );
+  }
+
+  // Strict access control: if no register ID is present, do not render anything
+  if (!openRegisterId) {
+    return null;
+  }
 
   return (
     <div className="h-[calc(100vh-64px)] grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
@@ -514,20 +546,69 @@ export default function POS() {
                 className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 placeholder-gray-500"
               />
             </div>
-            <div className="w-px bg-gray-300 hidden sm:block"></div>
-            <div className="flex-1 flex items-center gap-2 px-2">
+            <div className="flex-1 flex items-center gap-2 px-2 border-l border-gray-300">
               <ScanBarcode size={18} className="text-primary-500" />
               <input
                 type="text"
                 placeholder="Escanear código..."
                 className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 placeholder-gray-500 font-mono"
-                onKeyDown={(e) => {
+                onKeyDown={async (e) => {
                   if (e.key === "Enter") {
-                    // Logic to find product by code and add to cart
-                    const code = e.currentTarget.value;
-                    // Implement scan logic here or reuse search query if unified
-                    setSearchQuery(code); // Temporary simple binding
-                    e.currentTarget.value = "";
+                    const code = e.currentTarget.value.trim();
+                    if (!code) return;
+
+                    // 1. Try to find in current products list (exact match)
+                    const localMatch = products.find(
+                      (p) =>
+                        p.codigoBarras === code ||
+                        p.codigoInterno === code ||
+                        p.codigo === code,
+                    );
+
+                    if (localMatch) {
+                      if (localMatch.stock > 0) {
+                        addToCart(localMatch);
+                        setSuccess(`Añadido: ${localMatch.nombre}`);
+                        setTimeout(() => setSuccess(""), 1500);
+                      } else {
+                        setError(`Producto sin stock: ${localMatch.nombre}`);
+                        setTimeout(() => setError(""), 2000);
+                      }
+                      e.currentTarget.value = "";
+                      return;
+                    }
+
+                    // 2. If not found locally, search via API
+                    try {
+                      setLoadingProducts(true);
+                      const res = await salesService.getProducts(code);
+                      // Look for exact match in results
+                      const exactMatch = res.find(
+                        (p) =>
+                          p.codigoBarras === code ||
+                          p.codigoInterno === code ||
+                          p.codigo === code,
+                      );
+
+                      if (exactMatch) {
+                        if (exactMatch.stock > 0) {
+                          addToCart(exactMatch);
+                          setSuccess(`Añadido: ${exactMatch.nombre}`);
+                          setTimeout(() => setSuccess(""), 1500);
+                        } else {
+                          setError(`Producto sin stock: ${exactMatch.nombre}`);
+                          setTimeout(() => setError(""), 2000);
+                        }
+                      } else {
+                        setError("Producto no encontrado");
+                        setTimeout(() => setError(""), 2000);
+                      }
+                    } catch (err) {
+                      console.error("Scan error:", err);
+                    } finally {
+                      setLoadingProducts(false);
+                      e.currentTarget.value = "";
+                    }
                   }
                 }}
               />
@@ -731,9 +812,20 @@ export default function POS() {
             <span className="font-mono">Bs. {subtotal.toFixed(2)}</span>
           </div>
 
+          {clientDiscountPercent > 0 && (
+            <div className="flex justify-between items-center text-sm text-success-600 font-bold mb-2">
+              <span className="flex items-center gap-1">
+                <User size={13} /> Desc. Cliente ({clientDiscountPercent}%)
+              </span>
+              <span className="font-mono">
+                - Bs. {clientDiscountAmount.toFixed(2)}
+              </span>
+            </div>
+          )}
+
           {discount > 0 && (
             <div className="flex justify-between items-center text-sm text-amber-600 font-bold mb-2">
-              <span>Descuento</span>
+              <span>Descuento Manual</span>
               <span className="font-mono">
                 - Bs. {Number(discount).toFixed(2)}
               </span>
@@ -821,6 +913,7 @@ export default function POS() {
                     <button
                       onClick={() => {
                         setSelectedClient(null);
+                        setClientDiscountPercent(0);
                         setIsClientModalOpen(false);
                       }}
                       className={clsx(
@@ -845,6 +938,9 @@ export default function POS() {
                         key={client.id}
                         onClick={() => {
                           setSelectedClient(client);
+                          // Aplicar descuento del cliente automáticamente
+                          const pct = parseFloat(client.descuento) || 0;
+                          setClientDiscountPercent(pct);
                           setIsClientModalOpen(false);
                         }}
                         className={clsx(

@@ -625,8 +625,15 @@ export default function Productos() {
                   <input
                     type="text"
                     name="codigoBarras"
+                    autoFocus={!selectedProduct}
                     value={formData.codigoBarras}
                     onChange={handleChange}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault(); // Evitar que el modal se cierre o el form se envíe si se añade uno luego
+                        // El código ya está en formData gracias al onChange
+                      }
+                    }}
                     className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
                     placeholder="Ej: 7890123456789"
                   />

@@ -25,7 +25,6 @@ export default function Login() {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
-    remember: false,
   });
   const [error, setError] = useState("");
 
@@ -80,7 +79,7 @@ export default function Login() {
               <Wine size={40} className="text-white" />
             </div>
             <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">
-              Licorería
+              Licorería Brasil
             </h1>
             <p className="text-gray-500 text-sm mt-2">Sistema de Gestión</p>
           </div>
@@ -148,36 +147,6 @@ export default function Login() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-            </div>
-
-            {/* Remember Me */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-3 cursor-pointer group">
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    name="remember"
-                    checked={formData.remember}
-                    onChange={handleChange}
-                    className="sr-only peer"
-                  />
-                  <div className="w-5 h-5 bg-white border border-gray-300 rounded-md peer-checked:bg-sky-400 peer-checked:border-sky-400 transition-all duration-200"></div>
-                  <svg
-                    className="absolute top-1 left-1 w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
-                    fill="none"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <span className="text-sm text-gray-500 group-hover:text-gray-700 transition-colors">
-                  Recordarme
-                </span>
-              </label>
             </div>
 
             {/* Submit Button */}
