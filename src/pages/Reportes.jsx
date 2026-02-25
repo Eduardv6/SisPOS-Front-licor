@@ -91,7 +91,7 @@ export default function Reportes() {
         const res = await reportService.getInventoryStats(params);
         setInventoryStats(res);
       } else if (activeTab === "cajas") {
-        const res = await reportService.getCashStats();
+        const res = await reportService.getCashStats(params);
         setCashStats(res);
       }
     } catch (err) {
@@ -1201,15 +1201,28 @@ export default function Reportes() {
                               </span>
                             </div>
                             <div className="text-[11px] text-gray-400 font-medium">
-                              Cierre:{" "}
-                              {format(
-                                new Date(c.fullDate),
-                                "d/M/yyyy, h:mm:ss a",
-                                { locale: es },
+                              {c.estado === "CERRADA" ? (
+                                <>
+                                  Cierre:{" "}
+                                  {format(
+                                    new Date(c.fullDate),
+                                    "d/M/yyyy, h:mm:ss a",
+                                    { locale: es },
+                                  )}
+                                </>
+                              ) : (
+                                "En curso..."
                               )}
                             </div>
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-600 uppercase">
-                              CERRADA
+                            <span
+                              className={clsx(
+                                "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase",
+                                c.estado === "ABIERTA"
+                                  ? "bg-success-100 text-success-700"
+                                  : "bg-gray-100 text-gray-600",
+                              )}
+                            >
+                              {c.estado}
                             </span>
                           </div>
                         </td>
@@ -1267,45 +1280,51 @@ export default function Reportes() {
                           {formatCurrency(c.expectedBalance)}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className="flex flex-col items-center gap-1">
-                            {isPerfect ? (
-                              <>
-                                <CheckCircle
-                                  size={20}
-                                  className="text-success-500"
-                                />
-                                <span className="text-[10px] font-extrabold text-success-600 uppercase">
-                                  CUADRO PERFECTO
-                                </span>
-                              </>
-                            ) : isFaltante ? (
-                              <>
-                                <ArrowDownCircle
-                                  size={20}
-                                  className="text-primary-500"
-                                />
-                                <span className="text-[10px] font-extrabold text-primary-600 uppercase">
-                                  FALTANTE
-                                </span>
-                                <span className="text-xs font-black text-primary-600">
-                                  {formatCurrency(Math.abs(diffValue))}
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <ArrowUpCircle
-                                  size={20}
-                                  className="text-info-500"
-                                />
-                                <span className="text-[10px] font-extrabold text-info-600 uppercase">
-                                  SOBRANTE
-                                </span>
-                                <span className="text-xs font-black text-info-600">
-                                  {formatCurrency(diffValue)}
-                                </span>
-                              </>
-                            )}
-                          </div>
+                          {c.estado === "CERRADA" ? (
+                            <div className="flex flex-col items-center gap-1">
+                              {isPerfect ? (
+                                <>
+                                  <CheckCircle
+                                    size={20}
+                                    className="text-success-500"
+                                  />
+                                  <span className="text-[10px] font-extrabold text-success-600 uppercase">
+                                    CUADRO PERFECTO
+                                  </span>
+                                </>
+                              ) : isFaltante ? (
+                                <>
+                                  <ArrowDownCircle
+                                    size={20}
+                                    className="text-primary-500"
+                                  />
+                                  <span className="text-[10px] font-extrabold text-primary-600 uppercase">
+                                    FALTANTE
+                                  </span>
+                                  <span className="text-xs font-black text-primary-600">
+                                    {formatCurrency(Math.abs(diffValue))}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <ArrowUpCircle
+                                    size={20}
+                                    className="text-info-500"
+                                  />
+                                  <span className="text-[10px] font-extrabold text-info-600 uppercase">
+                                    SOBRANTE
+                                  </span>
+                                  <span className="text-xs font-black text-info-600">
+                                    {formatCurrency(diffValue)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs font-bold text-gray-400 italic">
+                              Caja en curso
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );

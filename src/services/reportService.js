@@ -16,8 +16,8 @@ const reportService = {
   getInventoryStats: async (params) => {
     return await api.get("/reports/inventory", { params });
   },
-  getCashStats: async () => {
-    return await api.get("/reports/cash");
+  getCashStats: async (params) => {
+    return await api.get("/reports/cash", { params });
   },
 };
 
