@@ -645,7 +645,11 @@ export default function POS() {
                     <div className="w-full aspect-square bg-white rounded flex items-center justify-center text-gray-300 group-hover:text-primary-100 transition-colors overflow-hidden relative">
                       {product.imagen ? (
                         <img
-                          src={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}${product.imagen}`}
+                          src={
+                            product.imagen.startsWith("http")
+                              ? product.imagen
+                              : `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${product.imagen}`
+                          }
                           alt={product.nombre}
                           className="w-full h-full object-cover"
                         />
