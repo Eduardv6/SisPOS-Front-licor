@@ -18,6 +18,8 @@ import {
   CheckCircle,
   ArrowDownCircle,
   ArrowUpCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import clsx from "clsx";
 import {
@@ -55,6 +57,12 @@ export default function Reportes() {
   const [productStats, setProductStats] = useState(null);
   const [inventoryStats, setInventoryStats] = useState(null);
   const [cashStats, setCashStats] = useState(null);
+  const [salesHistory, setSalesHistory] = useState([]);
+
+  // Pagination State
+  const [topProductsPage, setTopProductsPage] = useState(1);
+  const [salesHistoryPage, setSalesHistoryPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // UI State for exports
   const [showExportMenu, setShowExportMenu] = useState(null); // null, 'topProducts', 'lowStock', 'cashHistory'
@@ -76,14 +84,16 @@ export default function Reportes() {
       if (dateRange.end) params.endDate = dateRange.end;
 
       if (activeTab === "ventas") {
-        const [stats, chart, top] = await Promise.all([
+        const [stats, chart, top, history] = await Promise.all([
           reportService.getDashboardStats(params),
           reportService.getSalesChart(params),
           reportService.getTopProducts(params),
+          reportService.getSalesHistory(params),
         ]);
         setDashboardStats(stats);
         setSalesChart(chart);
         setTopProducts(top);
+        setSalesHistory(history);
       } else if (activeTab === "productos") {
         const res = await reportService.getProductStats();
         setProductStats(res);
@@ -238,6 +248,53 @@ export default function Reportes() {
         data,
         title: "Historial de Cierres de Caja Detailed",
         fileName: "historial-cajas",
+      });
+    }
+    setShowExportMenu(null);
+  };
+
+  // Export Sales History
+  const handleExportSalesHistory = (formatType) => {
+    if (formatType === "excel") {
+      const data = salesHistory.map((v) => ({
+        "Nro. Venta": `#${v.numeroVenta}`,
+        Fecha: format(new Date(v.fecha), "dd/MM/yyyy HH:mm", { locale: es }),
+        Productos: v.productos
+          .map((p) => `${p.cantidad}x ${p.nombre}`)
+          .join(", "),
+        Usuario: v.usuario,
+        "Método Pago":
+          v.metodoPago === "EFECTIVO"
+            ? "Efectivo"
+            : v.metodoPago === "QR"
+              ? "QR"
+              : v.metodoPago,
+        "Monto Total": v.total,
+        Descuento: v.descuento > 0 ? v.descuento : "-",
+      }));
+      exportToExcel(data, "historial-ventas");
+    } else {
+      const columns = [
+        "Nro. Venta",
+        "Fecha",
+        "Productos",
+        "Usuario",
+        "Monto",
+        "Desc.",
+      ];
+      const data = salesHistory.map((v) => [
+        `#${v.numeroVenta}`,
+        format(new Date(v.fecha), "dd/MM/yy HH:mm", { locale: es }),
+        v.productos.map((p) => `${p.cantidad}x ${p.nombre}`).join(", "),
+        v.usuario,
+        formatCurrency(v.total),
+        v.descuento > 0 ? formatCurrency(v.descuento) : "-",
+      ]);
+      exportToPDF({
+        columns,
+        data,
+        title: "Historial de Ventas",
+        fileName: "historial-ventas",
       });
     }
     setShowExportMenu(null);
@@ -561,116 +618,377 @@ export default function Reportes() {
           </div>
 
           {/* Top Products Table */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="font-bold text-gray-900 text-lg">
-                Productos Más Vendidos
-              </h3>
-              <div className="relative">
-                <button
-                  onClick={() =>
-                    setShowExportMenu(
-                      showExportMenu === "topProducts" ? null : "topProducts",
-                    )
-                  }
-                  className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-primary-600 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors border border-gray-200"
-                >
-                  <Download size={16} /> Exportar
-                </button>
+          {(() => {
+            const totalTopPages = Math.ceil(
+              topProducts.length / ITEMS_PER_PAGE,
+            );
+            const paginatedTop = topProducts.slice(
+              (topProductsPage - 1) * ITEMS_PER_PAGE,
+              topProductsPage * ITEMS_PER_PAGE,
+            );
+            const startIdx = (topProductsPage - 1) * ITEMS_PER_PAGE;
+            return (
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                  <h3 className="font-bold text-gray-900 text-lg">
+                    Productos Más Vendidos
+                  </h3>
+                  <div className="relative">
+                    <button
+                      onClick={() =>
+                        setShowExportMenu(
+                          showExportMenu === "topProducts"
+                            ? null
+                            : "topProducts",
+                        )
+                      }
+                      className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-primary-600 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors border border-gray-200"
+                    >
+                      <Download size={16} /> Exportar
+                    </button>
 
-                {showExportMenu === "topProducts" && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setShowExportMenu(null)}
-                    ></div>
-                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-2 animate-in fade-in zoom-in-95 duration-200">
+                    {showExportMenu === "topProducts" && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setShowExportMenu(null)}
+                        ></div>
+                        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-2 animate-in fade-in zoom-in-95 duration-200">
+                          <button
+                            onClick={() => handleExportTopProducts("excel")}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                          >
+                            <FileSpreadsheet
+                              size={18}
+                              className="text-success-600"
+                            />
+                            <span className="font-semibold">Excel (.xlsx)</span>
+                          </button>
+                          <button
+                            onClick={() => handleExportTopProducts("pdf")}
+                            className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                          >
+                            <FileText size={18} className="text-primary-600" />
+                            <span className="font-semibold">PDF (.pdf)</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-gray-50 text-gray-500 font-semibold uppercase text-xs">
+                      <tr>
+                        <th className="px-6 py-4">#</th>
+                        <th className="px-6 py-4">Producto</th>
+                        <th className="px-6 py-4">Categoría</th>
+                        <th className="px-6 py-4 text-center">Unidades</th>
+                        <th className="px-6 py-4 text-right">Ingresos</th>
+                        <th className="px-6 py-4 text-center">% Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {paginatedTop.map((p, i) => (
+                        <tr
+                          key={p.id}
+                          className="hover:bg-gray-50/50 transition-colors"
+                        >
+                          <td className="px-6 py-4 font-mono text-gray-400">
+                            {startIdx + i + 1}
+                          </td>
+                          <td className="px-6 py-4 font-bold text-gray-900">
+                            {p.name}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-600 font-semibold">
+                              {p.category}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-center font-medium">
+                            {p.units}
+                          </td>
+                          <td className="px-6 py-4 text-right font-bold text-gray-900">
+                            {formatCurrency(p.income)}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center gap-2 justify-center">
+                              <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-primary-500 rounded-full"
+                                  style={{ width: `${p.percent}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs font-semibold text-gray-500">
+                                {p.percent}%
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {topProducts.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="px-6 py-8 text-center text-gray-500"
+                          >
+                            No hay datos de ventas en este periodo.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {totalTopPages > 1 && (
+                  <div className="p-4 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">
+                      Mostrando {startIdx + 1}-
+                      {Math.min(startIdx + ITEMS_PER_PAGE, topProducts.length)}{" "}
+                      de {topProducts.length}
+                    </span>
+                    <div className="flex items-center gap-1">
                       <button
-                        onClick={() => handleExportTopProducts("excel")}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                        onClick={() =>
+                          setTopProductsPage((p) => Math.max(1, p - 1))
+                        }
+                        disabled={topProductsPage === 1}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       >
-                        <FileSpreadsheet
-                          size={18}
-                          className="text-success-600"
-                        />
-                        <span className="font-semibold">Excel (.xlsx)</span>
+                        <ChevronLeft size={18} />
                       </button>
+                      {Array.from(
+                        { length: totalTopPages },
+                        (_, i) => i + 1,
+                      ).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setTopProductsPage(page)}
+                          className={clsx(
+                            "w-8 h-8 rounded-lg text-sm font-bold transition-colors",
+                            page === topProductsPage
+                              ? "bg-primary-600 text-white"
+                              : "text-gray-600 hover:bg-gray-100",
+                          )}
+                        >
+                          {page}
+                        </button>
+                      ))}
                       <button
-                        onClick={() => handleExportTopProducts("pdf")}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                        onClick={() =>
+                          setTopProductsPage((p) =>
+                            Math.min(totalTopPages, p + 1),
+                          )
+                        }
+                        disabled={topProductsPage === totalTopPages}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       >
-                        <FileText size={18} className="text-primary-600" />
-                        <span className="font-semibold">PDF (.pdf)</span>
+                        <ChevronRight size={18} />
                       </button>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-gray-50 text-gray-500 font-semibold uppercase text-xs">
-                  <tr>
-                    <th className="px-6 py-4">#</th>
-                    <th className="px-6 py-4">Producto</th>
-                    <th className="px-6 py-4">Categoría</th>
-                    <th className="px-6 py-4 text-center">Unidades</th>
-                    <th className="px-6 py-4 text-right">Ingresos</th>
-                    <th className="px-6 py-4 text-center">% Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {topProducts.map((p, i) => (
-                    <tr
-                      key={p.id}
-                      className="hover:bg-gray-50/50 transition-colors"
-                    >
-                      <td className="px-6 py-4 font-mono text-gray-400">
-                        {i + 1}
-                      </td>
-                      <td className="px-6 py-4 font-bold text-gray-900">
-                        {p.name}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-600 font-semibold">
-                          {p.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center font-medium">
-                        {p.units}
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-gray-900">
-                        {formatCurrency(p.income)}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center gap-2 justify-center">
-                          <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary-500 rounded-full"
-                              style={{ width: `${p.percent}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-xs font-semibold text-gray-500">
-                            {p.percent}%
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {topProducts.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="px-6 py-8 text-center text-gray-500"
+            );
+          })()}
+
+          {/* Sales History Table */}
+          {(() => {
+            const totalHistPages = Math.ceil(
+              salesHistory.length / ITEMS_PER_PAGE,
+            );
+            const paginatedHist = salesHistory.slice(
+              (salesHistoryPage - 1) * ITEMS_PER_PAGE,
+              salesHistoryPage * ITEMS_PER_PAGE,
+            );
+            const startIdx = (salesHistoryPage - 1) * ITEMS_PER_PAGE;
+            return (
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                  <h3 className="font-bold text-gray-900 text-lg">
+                    Historial de Ventas
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-500 font-medium">
+                      {salesHistory.length} ventas
+                    </span>
+                    <div className="relative">
+                      <button
+                        onClick={() =>
+                          setShowExportMenu(
+                            showExportMenu === "salesHistory"
+                              ? null
+                              : "salesHistory",
+                          )
+                        }
+                        className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-primary-600 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-lg transition-colors border border-gray-200"
                       >
-                        No hay datos de ventas en este periodo.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                        <Download size={16} /> Exportar
+                      </button>
+                      {showExportMenu === "salesHistory" && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={() => setShowExportMenu(null)}
+                          ></div>
+                          <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-2 animate-in fade-in zoom-in-95 duration-200">
+                            <button
+                              onClick={() => handleExportSalesHistory("excel")}
+                              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                            >
+                              <FileSpreadsheet
+                                size={18}
+                                className="text-success-600"
+                              />
+                              <span className="font-semibold">
+                                Excel (.xlsx)
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => handleExportSalesHistory("pdf")}
+                              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-700 transition-colors"
+                            >
+                              <FileText
+                                size={18}
+                                className="text-primary-600"
+                              />
+                              <span className="font-semibold">PDF (.pdf)</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-gray-50 text-gray-500 font-semibold uppercase text-xs">
+                      <tr>
+                        <th className="px-6 py-4">Nro. Venta</th>
+                        <th className="px-6 py-4">Fecha</th>
+                        <th className="px-6 py-4">Productos</th>
+                        <th className="px-6 py-4">Usuario</th>
+                        <th className="px-6 py-4 text-right">Monto Total</th>
+                        <th className="px-6 py-4 text-center">Descuento</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {paginatedHist.map((venta) => (
+                        <tr
+                          key={venta.id}
+                          className="hover:bg-gray-50/50 transition-colors"
+                        >
+                          <td className="px-6 py-4 font-mono text-primary-600 font-bold text-xs">
+                            #{venta.numeroVenta}
+                          </td>
+                          <td className="px-6 py-4 text-gray-600 whitespace-nowrap">
+                            {format(new Date(venta.fecha), "dd/MM/yyyy HH:mm", {
+                              locale: es,
+                            })}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col gap-0.5 max-w-xs">
+                              {venta.productos.map((prod, idx) => (
+                                <span
+                                  key={idx}
+                                  className="text-xs text-gray-700"
+                                >
+                                  {prod.cantidad}x {prod.nombre}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 font-medium text-gray-800">
+                            {venta.usuario}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="font-bold text-gray-900">
+                              {formatCurrency(venta.total)}
+                            </div>
+                            <div className="text-xs text-gray-400 font-medium">
+                              {venta.metodoPago === "EFECTIVO"
+                                ? "Efectivo"
+                                : venta.metodoPago === "QR"
+                                  ? "QR"
+                                  : venta.metodoPago}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            {venta.descuento > 0 ? (
+                              <span className="px-2 py-1 bg-warning-50 text-warning-700 rounded font-bold text-xs">
+                                {formatCurrency(venta.descuento)}
+                              </span>
+                            ) : (
+                              <span className="text-gray-300 font-medium">
+                                —
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                      {salesHistory.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="px-6 py-8 text-center text-gray-500"
+                          >
+                            No hay ventas en este periodo.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {totalHistPages > 1 && (
+                  <div className="p-4 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-sm text-gray-500">
+                      Mostrando {startIdx + 1}-
+                      {Math.min(startIdx + ITEMS_PER_PAGE, salesHistory.length)}{" "}
+                      de {salesHistory.length}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() =>
+                          setSalesHistoryPage((p) => Math.max(1, p - 1))
+                        }
+                        disabled={salesHistoryPage === 1}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      {Array.from(
+                        { length: totalHistPages },
+                        (_, i) => i + 1,
+                      ).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => setSalesHistoryPage(page)}
+                          className={clsx(
+                            "w-8 h-8 rounded-lg text-sm font-bold transition-colors",
+                            page === salesHistoryPage
+                              ? "bg-primary-600 text-white"
+                              : "text-gray-600 hover:bg-gray-100",
+                          )}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() =>
+                          setSalesHistoryPage((p) =>
+                            Math.min(totalHistPages, p + 1),
+                          )
+                        }
+                        disabled={salesHistoryPage === totalHistPages}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 

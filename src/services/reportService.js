@@ -19,6 +19,9 @@ const reportService = {
   getCashStats: async (params) => {
     return await api.get("/reports/cash", { params });
   },
+  getSalesHistory: async (params) => {
+    return await api.get("/reports/sales-history", { params });
+  },
 };
 
 export default reportService;
