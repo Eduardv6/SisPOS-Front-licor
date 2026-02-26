@@ -3,6 +3,7 @@ import Layout from "./layouts/Layout";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -34,16 +35,75 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Dashboard />} />
+              {/* Rutas accesibles para TODOS los usuarios autenticados */}
               <Route path="pos" element={<POS />} />
               <Route path="apertura-caja" element={<AperturaCaja />} />
-              <Route path="inventario" element={<Inventario />} />
-              <Route path="productos" element={<Productos />} />
-              <Route path="categorias" element={<Categorias />} />
-              <Route path="clientes" element={<Clientes />} />
-              <Route path="reportes" element={<Reportes />} />
-              <Route path="usuarios" element={<Usuarios />} />
-              <Route path="configuracion" element={<Configuracion />} />
+
+              {/* Rutas solo para ADMINISTRADOR */}
+              <Route
+                index
+                element={
+                  <AdminRoute>
+                    <Dashboard />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="inventario"
+                element={
+                  <AdminRoute>
+                    <Inventario />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="productos"
+                element={
+                  <AdminRoute>
+                    <Productos />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="categorias"
+                element={
+                  <AdminRoute>
+                    <Categorias />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="clientes"
+                element={
+                  <AdminRoute>
+                    <Clientes />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="reportes"
+                element={
+                  <AdminRoute>
+                    <Reportes />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="usuarios"
+                element={
+                  <AdminRoute>
+                    <Usuarios />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="configuracion"
+                element={
+                  <AdminRoute>
+                    <Configuracion />
+                  </AdminRoute>
+                }
+              />
             </Route>
 
             {/* Catch-all: redirect to dashboard (ProtectedRoute will handle auth) */}

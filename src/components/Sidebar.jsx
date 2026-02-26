@@ -18,16 +18,31 @@ import clsx from "clsx";
 import { useNavigate } from "react-router-dom";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Tag, label: "Productos", path: "/productos" },
-  { icon: Layers, label: "Categorías", path: "/categorias" },
-  { icon: Package, label: "Inventario", path: "/inventario" },
-  { icon: Users, label: "Clientes", path: "/clientes" },
-  { icon: UserCog, label: "Usuarios", path: "/usuarios" },
-  { icon: Banknote, label: "Apertura de Caja", path: "/apertura-caja" },
-  { icon: ShoppingCart, label: "Punto de Venta", path: "/pos" },
-  { icon: FileText, label: "Reportes", path: "/reportes" },
-  { icon: Settings, label: "Configuración", path: "/configuracion" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", adminOnly: true },
+  { icon: Tag, label: "Productos", path: "/productos", adminOnly: true },
+  { icon: Layers, label: "Categorías", path: "/categorias", adminOnly: true },
+  { icon: Package, label: "Inventario", path: "/inventario", adminOnly: true },
+  { icon: Users, label: "Clientes", path: "/clientes", adminOnly: true },
+  { icon: UserCog, label: "Usuarios", path: "/usuarios", adminOnly: true },
+  {
+    icon: Banknote,
+    label: "Apertura de Caja",
+    path: "/apertura-caja",
+    adminOnly: false,
+  },
+  {
+    icon: ShoppingCart,
+    label: "Punto de Venta",
+    path: "/pos",
+    adminOnly: false,
+  },
+  { icon: FileText, label: "Reportes", path: "/reportes", adminOnly: true },
+  {
+    icon: Settings,
+    label: "Configuración",
+    path: "/configuracion",
+    adminOnly: true,
+  },
 ];
 
 import { useAuth } from "../context/AuthContext";
@@ -39,6 +54,13 @@ export default function Sidebar() {
   const { logout, user } = useAuth();
   const toast = useToast();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  const isAdmin = user?.role === "ADMINISTRADOR";
+
+  // Filtrar items del menú según el rol
+  const filteredNavItems = navItems.filter(
+    (item) => !item.adminOnly || isAdmin,
+  );
 
   const handleLogout = async () => {
     try {
@@ -81,7 +103,7 @@ export default function Sidebar() {
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-1">
-          {navItems.map((item) => (
+          {filteredNavItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
@@ -131,7 +153,7 @@ export default function Sidebar() {
                 {user?.username || "Usuario"}
               </div>
               <div className="text-xs text-gray-500 truncate">
-                {user?.rol || "Rol"}
+                {user?.role === "ADMINISTRADOR" ? "Administrador" : "Cajero"}
               </div>
             </div>
           </div>
