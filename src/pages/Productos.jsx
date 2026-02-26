@@ -416,7 +416,7 @@ export default function Productos() {
                   </div>
                   {product.imagen ? (
                     <img
-                      src={`http://localhost:5000${product.imagen}`}
+                      src={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}${product.imagen}`}
                       alt={product.nombre}
                       className="w-full h-full object-contain"
                     />
