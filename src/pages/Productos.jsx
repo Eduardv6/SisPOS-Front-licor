@@ -44,10 +44,36 @@ export default function Productos() {
     precioCompra: "",
     precioVenta: "",
     unidadMedida: "UNIDAD",
-    stockInicial: "", // Only for new products
+    stockInicial: "",
     marca: "",
     imagen: null,
   });
+
+  // Presentaciones State
+  const [presentaciones, setPresentaciones] = useState([]);
+  const [newPres, setNewPres] = useState({
+    nombre: "",
+    cantidadBase: "",
+    precioVenta: "",
+  });
+
+  const addPresentacion = () => {
+    if (!newPres.nombre || !newPres.cantidadBase || !newPres.precioVenta)
+      return;
+    setPresentaciones((prev) => [
+      ...prev,
+      {
+        ...newPres,
+        cantidadBase: parseInt(newPres.cantidadBase),
+        precioVenta: parseFloat(newPres.precioVenta),
+      },
+    ]);
+    setNewPres({ nombre: "", cantidadBase: "", precioVenta: "" });
+  };
+
+  const removePresentacion = (index) => {
+    setPresentaciones((prev) => prev.filter((_, i) => i !== index));
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -95,9 +121,20 @@ export default function Productos() {
       precioVenta: product.precioVenta,
       unidadMedida: product.unidadMedida,
       marca: product.marca || "",
-      stockInicial: "", // Not editable here
+      stockInicial: "",
       imagen: null,
     });
+    // Load existing presentaciones (exclude default "Unidad")
+    const existingPres = (product.presentaciones || [])
+      .filter((p) => !p.esDefault)
+      .map((p) => ({
+        id: p.id,
+        nombre: p.nombre,
+        cantidadBase: p.cantidadBase,
+        precioVenta: Number(p.precioVenta),
+      }));
+    setPresentaciones(existingPres);
+    setNewPres({ nombre: "", cantidadBase: "", precioVenta: "" });
     setIsModalOpen(true);
   };
 
@@ -121,6 +158,8 @@ export default function Productos() {
       marca: "",
       imagen: null,
     });
+    setPresentaciones([]);
+    setNewPres({ nombre: "", cantidadBase: "", precioVenta: "" });
     setIsModalOpen(true);
   };
 
@@ -137,15 +176,30 @@ export default function Productos() {
         }
       });
 
-      // Add explicit user context if not in formData (though usually handled by backend via token or separate logic)
-      // Actually controller expects fields in body. FormData sends them as strings.
-      // Backend controller parses them.
-
-      // We need to ensure numbers are handled correctly by backend (it does parseFloat/parseInt)
-      // But we must append user context if we were doing it via spread before.
       if (user?.id) data.append("usuarioId", user.id);
 
+      // Append presentaciones as JSON
+      if (presentaciones.length > 0) {
+        data.append("presentaciones", JSON.stringify(presentaciones));
+      }
+
       if (selectedProduct) {
+        // For update, also include the default "Unidad" presentation
+        const defaultPres = (selectedProduct.presentaciones || []).find(
+          (p) => p.esDefault,
+        );
+        if (defaultPres) {
+          const allPres = [
+            {
+              id: defaultPres.id,
+              nombre: "Unidad",
+              cantidadBase: 1,
+              precioVenta: parseFloat(formData.precioVenta),
+            },
+            ...presentaciones,
+          ];
+          data.set("presentaciones", JSON.stringify(allPres));
+        }
         await productService.update(selectedProduct.id, data);
         toast.success("Producto actualizado correctamente");
         await fetchProducts();
@@ -783,6 +837,108 @@ export default function Productos() {
                     accept="image/*"
                     className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
                   />
+                </div>
+              </div>
+
+              {/* Presentaciones Section */}
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <Package size={16} className="text-primary-500" />
+                  Presentaciones de Venta
+                  <span className="text-xs font-normal text-gray-400 ml-1">
+                    (La "Unidad" se crea automáticamente con el precio de venta)
+                  </span>
+                </h3>
+
+                {/* Existing presentations */}
+                {presentaciones.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    {presentaciones.map((pres, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 bg-gray-50 p-2.5 rounded-lg border border-gray-200"
+                      >
+                        <div className="flex-1 font-medium text-sm text-gray-800">
+                          {pres.nombre}
+                        </div>
+                        <div className="text-xs text-gray-500 bg-white px-2 py-1 rounded border">
+                          x{pres.cantidadBase} unid.
+                        </div>
+                        <div className="text-sm font-bold text-primary-600 font-mono">
+                          Bs. {Number(pres.precioVenta).toFixed(2)}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removePresentacion(index)}
+                          className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add new presentation row */}
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Nombre
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Caja x20"
+                      value={newPres.nombre}
+                      onChange={(e) =>
+                        setNewPres((p) => ({ ...p, nombre: e.target.value }))
+                      }
+                      className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                    />
+                  </div>
+                  <div className="w-24">
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Cantidad
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="20"
+                      min="2"
+                      value={newPres.cantidadBase}
+                      onChange={(e) =>
+                        setNewPres((p) => ({
+                          ...p,
+                          cantidadBase: e.target.value,
+                        }))
+                      }
+                      className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                    />
+                  </div>
+                  <div className="w-28">
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Precio (Bs.)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="25.00"
+                      step="0.01"
+                      value={newPres.precioVenta}
+                      onChange={(e) =>
+                        setNewPres((p) => ({
+                          ...p,
+                          precioVenta: e.target.value,
+                        }))
+                      }
+                      className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addPresentacion}
+                    className="p-2 bg-primary-100 text-primary-600 rounded-lg hover:bg-primary-200 transition-colors"
+                    title="Agregar Presentación"
+                  >
+                    <Plus size={18} />
+                  </button>
                 </div>
               </div>
             </div>

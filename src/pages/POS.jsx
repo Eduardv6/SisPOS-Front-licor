@@ -218,11 +218,15 @@ export default function POS() {
   const [loadingClients, setLoadingClients] = useState(false);
 
   const [discount, setDiscount] = useState(0);
-  const [clientDiscountPercent, setClientDiscountPercent] = useState(0); // % de descuento del cliente
+  const [clientDiscountPercent, setClientDiscountPercent] = useState(0);
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
   const [tempDiscount, setTempDiscount] = useState("");
   const [isExpressMode, setIsExpressMode] = useState(false);
   const [expressData, setExpressData] = useState({ nombre: "", ciNit: "" });
+
+  // Presentation Selector State
+  const [isPresentationModalOpen, setIsPresentationModalOpen] = useState(false);
+  const [presentationProduct, setPresentationProduct] = useState(null);
 
   // Cargar Categorías
   useEffect(() => {
@@ -280,33 +284,69 @@ export default function POS() {
   }, [fetchProducts]);
 
   // Cart Logic
-  const addToCart = (product) => {
+  const handleProductClick = (product) => {
+    const presentations = product.presentaciones || [];
+    if (presentations.length > 1) {
+      // Show presentation selector
+      setPresentationProduct(product);
+      setIsPresentationModalOpen(true);
+    } else {
+      // Single presentation or none — add directly with default
+      const defaultPres =
+        presentations.find((p) => p.esDefault) || presentations[0];
+      addToCart(product, defaultPres);
+    }
+  };
+
+  const addToCart = (product, presentation) => {
+    // Use a unique key combining product id + presentation id
+    const cartKey = presentation
+      ? `${product.id}-${presentation.id}`
+      : `${product.id}`;
+    const precio = presentation
+      ? presentation.precioVenta
+      : product.precioVenta;
+
     setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
+      const existing = prev.find((item) => item.cartKey === cartKey);
       if (existing) {
-        // Validar stock si se desea, aunque el backend valida
-        if (existing.quantity >= product.stock) {
-          // Opcional: Alerta de stock maximo alcanzado en UI
+        // Validate stock: quantity * cantidadBase should not exceed total stock
+        const cantidadBase = presentation ? presentation.cantidadBase : 1;
+        const newQtyBase = (existing.quantity + 1) * cantidadBase;
+        if (newQtyBase > product.stock) {
           return prev;
         }
         return prev.map((item) =>
-          item.id === product.id
+          item.cartKey === cartKey
             ? { ...item, quantity: item.quantity + 1 }
             : item,
         );
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return [
+        ...prev,
+        {
+          ...product,
+          cartKey,
+          quantity: 1,
+          precioVenta: precio,
+          presentacion: presentation || null,
+          presentacionId: presentation?.id || null,
+          presentacionNombre: presentation?.nombre || "Unidad",
+          cantidadBase: presentation?.cantidadBase || 1,
+        },
+      ];
     });
   };
 
-  const updateQuantity = (id, delta) => {
+  const updateQuantity = (cartKey, delta) => {
     setCart((prev) =>
       prev.map((item) => {
-        if (item.id === id) {
+        if (item.cartKey === cartKey) {
           const newQty = Math.max(1, item.quantity + delta);
-          // Validar stock
-          const product = products.find((p) => p.id === id) || item; // item tiene datos, pero stock actualizado esta en products
-          if (product && newQty > product.stock) return item;
+          // Validate stock in base units
+          const cantidadBase = item.cantidadBase || 1;
+          const product = products.find((p) => p.id === item.id) || item;
+          if (product && newQty * cantidadBase > product.stock) return item;
           return { ...item, quantity: newQty };
         }
         return item;
@@ -314,8 +354,8 @@ export default function POS() {
     );
   };
 
-  const removeFromCart = (id) => {
-    setCart((prev) => prev.filter((item) => item.id !== id));
+  const removeFromCart = (cartKey) => {
+    setCart((prev) => prev.filter((item) => item.cartKey !== cartKey));
   };
 
   const clearCart = () => {
@@ -371,6 +411,7 @@ export default function POS() {
           id: item.id,
           quantity: item.quantity,
           nombre: item.nombre,
+          presentacionId: item.presentacionId || null,
         })),
         metodoPago: paymentMethod,
         clienteId: selectedClient ? selectedClient.id : null,
@@ -567,7 +608,7 @@ export default function POS() {
 
                     if (localMatch) {
                       if (localMatch.stock > 0) {
-                        addToCart(localMatch);
+                        handleProductClick(localMatch);
                         setSuccess(`Añadido: ${localMatch.nombre}`);
                         setTimeout(() => setSuccess(""), 1500);
                       } else {
@@ -592,7 +633,7 @@ export default function POS() {
 
                       if (exactMatch) {
                         if (exactMatch.stock > 0) {
-                          addToCart(exactMatch);
+                          handleProductClick(exactMatch);
                           setSuccess(`Añadido: ${exactMatch.nombre}`);
                           setTimeout(() => setSuccess(""), 1500);
                         } else {
@@ -633,7 +674,7 @@ export default function POS() {
                 {products.map((product) => (
                   <button
                     key={product.id}
-                    onClick={() => addToCart(product)}
+                    onClick={() => handleProductClick(product)}
                     disabled={product.stock <= 0}
                     className={clsx(
                       "bg-gray-50 border-2 border-gray-200 rounded-lg p-3 flex flex-col gap-2 hover:bg-white transition-all text-left group",
@@ -729,15 +770,21 @@ export default function POS() {
             <div className="space-y-2">
               {cart.map((item) => (
                 <div
-                  key={item.id}
+                  key={item.cartKey}
                   className="flex flex-col p-3 bg-gray-50/80 rounded-lg border border-gray-100 hover:border-primary-200 transition-colors group"
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="font-bold text-xs text-gray-800 leading-tight pr-2 uppercase">
                       {item.nombre}
+                      {item.presentacionNombre &&
+                        item.presentacionNombre !== "Unidad" && (
+                          <span className="text-primary-500 font-semibold ml-1">
+                            — {item.presentacionNombre}
+                          </span>
+                        )}
                     </div>
                     <button
-                      onClick={() => removeFromCart(item.id)}
+                      onClick={() => removeFromCart(item.cartKey)}
                       className="text-gray-300 hover:text-primary-500 transition-colors opacity-0 group-hover:opacity-100"
                     >
                       <X size={14} />
@@ -747,7 +794,7 @@ export default function POS() {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center bg-white rounded border border-gray-200 shadow-sm">
                       <button
-                        onClick={() => updateQuantity(item.id, -1)}
+                        onClick={() => updateQuantity(item.cartKey, -1)}
                         className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 text-gray-600"
                       >
                         <Minus size={12} />
@@ -756,7 +803,7 @@ export default function POS() {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => updateQuantity(item.id, 1)}
+                        onClick={() => updateQuantity(item.cartKey, 1)}
                         className="w-7 h-7 flex items-center justify-center hover:bg-gray-100 text-gray-600"
                       >
                         <Plus size={12} />
@@ -1751,6 +1798,74 @@ export default function POS() {
                 }
               }
             `}</style>
+          </div>
+        </div>
+      )}
+      {/* Presentation Selector Modal */}
+      {isPresentationModalOpen && presentationProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsPresentationModalOpen(false)}
+          ></div>
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-4 border-b border-gray-100 bg-gray-50">
+              <h3 className="font-bold text-gray-900">
+                Seleccionar Presentación
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5 uppercase">
+                {presentationProduct.nombre}
+              </p>
+            </div>
+            <div className="p-4 space-y-2">
+              {(presentationProduct.presentaciones || []).map((pres) => {
+                const availableQty = Math.floor(
+                  presentationProduct.stock / pres.cantidadBase,
+                );
+                return (
+                  <button
+                    key={pres.id}
+                    disabled={availableQty <= 0}
+                    onClick={() => {
+                      addToCart(presentationProduct, pres);
+                      setIsPresentationModalOpen(false);
+                      setPresentationProduct(null);
+                    }}
+                    className={clsx(
+                      "w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all text-left",
+                      availableQty > 0
+                        ? "border-gray-200 hover:border-primary-400 hover:bg-primary-50"
+                        : "border-gray-100 opacity-50 cursor-not-allowed",
+                    )}
+                  >
+                    <div>
+                      <div className="font-bold text-sm text-gray-900">
+                        {pres.nombre}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {pres.cantidadBase === 1
+                          ? "1 unidad"
+                          : `${pres.cantidadBase} unidades`}
+                        <span className="ml-2 text-success-600 font-medium">
+                          Disponible: {availableQty}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-lg font-black text-primary-600 font-mono">
+                      Bs. {pres.precioVenta.toFixed(2)}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="p-3 bg-gray-50 border-t border-gray-100">
+              <button
+                onClick={() => setIsPresentationModalOpen(false)}
+                className="w-full py-2 text-sm font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}
