@@ -286,12 +286,13 @@ export default function POS() {
   // Cart Logic
   const handleProductClick = (product) => {
     const presentations = product.presentaciones || [];
-    if (presentations.length > 1) {
-      // Show presentation selector
+    // Show modal if there's any non-default presentation (box, pack, etc.)
+    const hasMultiplePresentations = presentations.some((p) => !p.esDefault);
+    if (hasMultiplePresentations || presentations.length > 1) {
       setPresentationProduct(product);
       setIsPresentationModalOpen(true);
     } else {
-      // Single presentation or none — add directly with default
+      // Only default or no presentations — add directly
       const defaultPres =
         presentations.find((p) => p.esDefault) || presentations[0];
       addToCart(product, defaultPres);
