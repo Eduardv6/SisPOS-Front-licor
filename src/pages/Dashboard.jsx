@@ -41,43 +41,43 @@ const StatCard = ({
   colorClass,
   loading,
 }) => (
-  <div className="bg-white p-4 rounded-xl border border-gray-200 flex gap-4 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
+  <div className="bg-white p-6 rounded-2xl border border-gray-100 flex gap-4 hover:-translate-y-2 hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 relative overflow-hidden group">
     <div
       className={clsx(
-        "absolute top-0 left-0 right-0 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-transparent via-current to-transparent",
+        "absolute top-0 left-0 right-0 h-1 opacity-0 group-hover:opacity-100 transition-all duration-300 bg-gradient-to-r from-transparent via-current to-transparent",
         colorClass,
       )}
     ></div>
     <div
       className={clsx(
-        "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-opacity-10",
+        "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-opacity-10 transition-transform duration-300 group-hover:scale-110",
         colorClass.replace("text-", "bg-").replace("500", "500/10"),
         colorClass,
       )}
     >
-      <Icon size={20} />
+      <Icon size={24} />
     </div>
     <div className="flex-1 min-w-0">
-      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 truncate">
+      <div className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2 truncate">
         {title}
       </div>
       {loading ? (
-        <div className="h-7 w-20 bg-gray-100 animate-pulse rounded mb-1"></div>
+        <div className="h-8 w-24 bg-gray-100 animate-pulse rounded mb-2"></div>
       ) : (
-        <div className="text-xl font-black text-gray-900 mb-1 tracking-tight leading-none">
+        <div className="text-2xl font-black text-gray-900 mb-2 tracking-tight leading-none group-hover:text-primary-600 transition-colors">
           {value}
         </div>
       )}
       {loading ? (
-        <div className="h-3 w-12 bg-gray-50 animate-pulse rounded"></div>
+        <div className="h-4 w-16 bg-gray-50 animate-pulse rounded"></div>
       ) : (
         <div
           className={clsx(
-            "flex items-center gap-1 text-[11px] font-bold",
-            isPositive ? "text-success-600" : "text-primary-600",
+            "flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-full inline-flex",
+            isPositive ? "bg-success-50 text-success-600" : "bg-danger-50 text-danger-600",
           )}
         >
-          {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+          {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
           {change}
         </div>
       )}
@@ -174,15 +174,15 @@ export default function Dashboard() {
   } = data || {};
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-8">
       {/* Header */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tighter">
+          <h1 className="text-3xl font-black text-gray-900 tracking-tight">
             Dashboard
           </h1>
-          <div className="flex items-center gap-2 text-gray-400 text-xs mt-1 font-medium">
-            <Activity size={14} className="text-primary-500" />
+          <div className="flex items-center gap-2 text-gray-500 text-sm mt-2 font-medium">
+            <Activity size={16} className="text-primary-500" />
             <span>Resumen general del sistema</span>
           </div>
         </div>
@@ -193,11 +193,12 @@ export default function Dashboard() {
           >
             <button
               onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-              className="relative p-2 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:border-gray-300 transition-colors"
+              className="relative p-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all shadow-sm"
+              aria-label="Notificaciones"
             >
-              <Bell size={20} className="text-gray-600" />
+              <Bell size={22} className="text-gray-700" />
               {lowStockProducts?.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-gray-50">
+                <span className="absolute -top-1.5 -right-1.5 bg-danger-500 text-white text-[11px] font-bold w-5 h-5 flex justify-center items-center rounded-full border-2 border-white shadow-sm animate-pulse">
                   {lowStockProducts.length}
                 </span>
               )}
@@ -205,7 +206,7 @@ export default function Dashboard() {
 
             {/* Notifications Dropdown */}
             {isNotificationsOpen && (
-              <div className="absolute right-0 top-12 w-80 bg-white border border-gray-200 rounded-xl shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200">
+              <div className="absolute left-0 md:left-auto md:right-0 top-14 w-80 md:w-96 bg-white border border-gray-100 rounded-2xl shadow-2xl z-50 animate-in fade-in slide-in-from-top-4 duration-200">
                 <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center rounded-t-xl">
                   <h3 className="font-bold text-gray-900 text-sm">
                     Notificaciones
@@ -273,8 +274,10 @@ export default function Dashboard() {
         <StatCard
           title="Ventas del Día"
           value={
-            stats?.salesToday?.value
-              ? `Bs. ${stats.salesToday.value}`
+            stats?.salesToday?.value !== undefined
+              ? String(stats.salesToday.value).includes("Bs.")
+                ? stats.salesToday.value
+                : `Bs. ${stats.salesToday.value}`
               : "Bs. 0.00"
           }
           change={stats?.salesToday?.change}
@@ -402,33 +405,40 @@ export default function Dashboard() {
             {topProducts?.map((product, index) => (
               <div
                 key={index}
-                className="flex items-center gap-4 p-2 hover:bg-gray-50 rounded-md transition-colors"
+                className="flex items-center gap-4 p-3 hover:bg-gray-50/80 rounded-xl transition-all duration-200 group border border-transparent hover:border-gray-100"
               >
                 <div
                   className={clsx(
-                    "w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shrink-0",
+                    "w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0 shadow-sm transition-transform group-hover:scale-110",
                     index === 0
-                      ? "bg-gradient-to-br from-[#FFD700] to-[#FFA500] text-white"
-                      : "bg-gray-100 text-gray-700",
+                      ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-orange-500/20"
+                      : index === 1
+                        ? "bg-gradient-to-br from-gray-300 to-gray-400 text-white shadow-gray-400/20"
+                        : index === 2
+                          ? "bg-gradient-to-br from-amber-700 to-amber-800 text-white shadow-amber-800/20"
+                          : "bg-gray-100 text-gray-600",
                   )}
                 >
-                  {product.rank}
+                  #{product.rank}
                 </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-sm text-gray-900 leading-tight">
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm text-gray-900 leading-tight truncate group-hover:text-primary-600 transition-colors">
                     {product.name}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs font-medium text-gray-500 mt-0.5 truncate uppercase tracking-wide">
                     {product.category}
                   </div>
                 </div>
                 <div className="text-right min-w-[100px]">
-                  <div className="text-xs font-semibold text-gray-600 mb-1">
-                    {product.sales} unidades
+                  <div className="text-[13px] font-black text-gray-700 mb-1.5">
+                    {product.sales} <span className="text-gray-400 font-medium text-xs">unid.</span>
                   </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full"
+                      className={clsx(
+                        "h-full rounded-full transition-all duration-1000 ease-out",
+                        index === 0 ? "bg-gradient-to-r from-orange-400 to-orange-500" : "bg-gradient-to-r from-primary-400 to-primary-600"
+                      )}
                       style={{ width: `${product.percentage}%` }}
                     ></div>
                   </div>
@@ -462,37 +472,38 @@ export default function Dashboard() {
             {transactions?.map((tx) => (
               <div
                 key={tx.id}
-                className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-md transition-colors"
+                className="flex items-center gap-4 p-3 hover:bg-gray-50/80 rounded-xl transition-all duration-200 group border border-transparent hover:border-gray-100"
               >
                 <div
                   className={clsx(
-                    "w-10 h-10 rounded-md flex items-center justify-center shrink-0",
+                    "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-110",
                     tx.type === "sale"
-                      ? "bg-success-50 text-success-600"
+                      ? "bg-success-50 text-success-600 border border-success-100"
                       : tx.type === "income"
-                        ? "bg-info-50 text-info-600"
-                        : "bg-warning-50 text-warning-600",
+                        ? "bg-info-50 text-info-600 border border-info-100"
+                        : "bg-warning-50 text-warning-600 border border-warning-100",
                   )}
                 >
                   {tx.type === "sale" ? (
-                    <DollarSign size={16} />
+                    <DollarSign size={20} />
                   ) : tx.type === "income" ? (
-                    <Package size={16} />
+                    <Package size={20} />
                   ) : (
-                    <AlertTriangle size={16} />
+                    <AlertTriangle size={20} />
                   )}
                 </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-sm text-gray-900">
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm text-gray-900 truncate group-hover:text-primary-600 transition-colors">
                     {tx.title}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs font-medium text-gray-500 mt-0.5 flex items-center gap-1">
+                    <Clock size={12} />
                     {formatTime(tx.time)}
                   </div>
                 </div>
                 <div
                   className={clsx(
-                    "font-bold text-sm font-mono",
+                    "font-black text-sm bg-gray-50/50 px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm",
                     tx.amount.startsWith("+")
                       ? "text-success-600"
                       : "text-primary-600",

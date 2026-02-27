@@ -36,10 +36,10 @@
   --color-info-600: #2563eb;
   --color-info-700: #1d4ed8;
 
-  --color-danger-50: #f0f9ff;
-  --color-danger-500: #0ea5e9;
-  --color-danger-600: #0284c7;
-  --color-danger-700: #0369a1;
+  --color-danger-50: #fef2f2;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
 }
 
 @layer base {
