@@ -1737,7 +1737,11 @@ export default function POS() {
                   <div className="w-20 h-20 bg-white border border-gray-100 rounded-xl flex items-center justify-center mx-auto mb-2 overflow-hidden">
                     {settings.empresa_logo ? (
                       <img
-                        src={`${import.meta.env.VITE_API_URL || "http://localhost:5000"}${settings.empresa_logo}`}
+                        src={
+                          settings.empresa_logo?.startsWith("http")
+                            ? settings.empresa_logo
+                            : `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${settings.empresa_logo}`
+                        }
                         alt="Logo"
                         className="max-w-full max-h-full object-contain"
                       />

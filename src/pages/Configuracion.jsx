@@ -263,7 +263,9 @@ export default function Configuracion() {
                         <img
                           src={
                             logoPreview ||
-                            `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${settings.empresa_logo}`
+                            (settings.empresa_logo?.startsWith("http")
+                              ? settings.empresa_logo
+                              : `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${settings.empresa_logo}`)
                           }
                           alt="Logo Preview"
                           className="max-w-full max-h-full object-contain p-4"
