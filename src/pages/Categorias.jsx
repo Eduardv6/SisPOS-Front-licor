@@ -59,23 +59,23 @@ export default function Categorias() {
     active: true,
   });
 
-  const fetchCategories = async (categoryToKeep = selectedCategory) => {
+  const fetchCategories = async (optimisticCategory = null) => {
     try {
       setIsLoading(true);
       const data = await categoryService.getAll();
 
       let finalData = [...data];
 
-      // If we have a selected category (or one we just saved), ensure it's in the list
-      if (categoryToKeep) {
-        const exists = finalData.find((c) => c.id === categoryToKeep.id);
+      // If we have an explicitly provided optimistic update, apply it
+      if (optimisticCategory) {
+        const exists = finalData.find((c) => c.id === optimisticCategory.id);
         if (!exists) {
-          finalData.push(categoryToKeep);
+          finalData.push(optimisticCategory);
         } else {
-          // If it exists (e.g. backend returned it), make sure we use the latest version (categoryToKeep)
+          // If it exists (e.g. backend returned it), make sure we use the latest version (optimisticCategory)
           // This is important if backend data is stale or if we want to show our optimistic update
           finalData = finalData.map((c) =>
-            c.id === categoryToKeep.id ? categoryToKeep : c,
+            c.id === optimisticCategory.id ? optimisticCategory : c,
           );
         }
       }
@@ -92,13 +92,15 @@ export default function Categorias() {
 
       setCategories(sortedData);
 
-      // Sync selectedCategory only if we didn't pass an explicit one (normal fetch)
-      // If we passed categoryToKeep, we expect the caller to have handled selectedCategory state
-      if (!categoryToKeep && selectedCategory) {
-        const updatedSelected = sortedData.find(
-          (c) => c.id === selectedCategory.id,
-        );
-        if (updatedSelected) setSelectedCategory(updatedSelected);
+      // Always sync selectedCategory with the freshly fetched data so we get the latest subcategories
+      if (selectedCategory || optimisticCategory) {
+        const idToSync = optimisticCategory
+          ? optimisticCategory.id
+          : selectedCategory?.id;
+        const updatedSelected = sortedData.find((c) => c.id === idToSync);
+        if (updatedSelected) {
+          setSelectedCategory(updatedSelected);
+        }
       }
     } catch (error) {
       console.error("Error fetching categories:", error);

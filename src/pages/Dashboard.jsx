@@ -74,7 +74,9 @@ const StatCard = ({
         <div
           className={clsx(
             "flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-full inline-flex",
-            isPositive ? "bg-success-50 text-success-600" : "bg-danger-50 text-danger-600",
+            isPositive
+              ? "bg-success-50 text-success-600"
+              : "bg-danger-50 text-danger-600",
           )}
         >
           {isPositive ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
@@ -431,13 +433,18 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right min-w-[100px]">
                   <div className="text-[13px] font-black text-gray-700 mb-1.5">
-                    {product.sales} <span className="text-gray-400 font-medium text-xs">unid.</span>
+                    {product.sales}{" "}
+                    <span className="text-gray-400 font-medium text-xs">
+                      unid.
+                    </span>
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
                       className={clsx(
                         "h-full rounded-full transition-all duration-1000 ease-out",
-                        index === 0 ? "bg-gradient-to-r from-orange-400 to-orange-500" : "bg-gradient-to-r from-primary-400 to-primary-600"
+                        index === 0
+                          ? "bg-gradient-to-r from-orange-400 to-orange-500"
+                          : "bg-gradient-to-r from-primary-400 to-primary-600",
                       )}
                       style={{ width: `${product.percentage}%` }}
                     ></div>
@@ -570,7 +577,14 @@ export default function Dashboard() {
                       navigate("/configuracion");
                     else navigate("/reportes");
                   }}
-                  className="px-3 py-1 bg-white border border-current rounded text-xs font-semibold hover:bg-current hover:text-white transition-colors"
+                  className={clsx(
+                    "px-3 py-1 bg-white border rounded text-xs font-semibold transition-colors",
+                    alert.type === "warning"
+                      ? "border-warning-500 text-warning-600 hover:bg-warning-500 hover:text-white"
+                      : alert.type === "info"
+                        ? "border-info-500 text-info-600 hover:bg-info-500 hover:text-white"
+                        : "border-success-500 text-success-600 hover:bg-success-500 hover:text-white",
+                  )}
                 >
                   {alert.type === "warning"
                     ? "Revisar"
