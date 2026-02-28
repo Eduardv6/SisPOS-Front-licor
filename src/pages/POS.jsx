@@ -504,7 +504,9 @@ export default function POS() {
         {/* Header */}
         <div className="flex justify-between items-center bg-white p-5 rounded-2xl border border-gray-100 shadow-sm shrink-0 transition-all hover:shadow-md">
           <div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">Punto de Venta</h1>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+              Punto de Venta
+            </h1>
             <p className="text-sm font-medium text-gray-500 mt-1 flex items-center gap-1.5">
               <User size={14} className="text-primary-500" />
               {user?.nombre
@@ -520,7 +522,10 @@ export default function POS() {
                 En Caja
               </div>
               <div className="text-xl font-black text-gray-900 font-mono leading-none">
-                Bs. {currentCash.toLocaleString("es-BO", { minimumFractionDigits: 2 })}
+                Bs.{" "}
+                {currentCash.toLocaleString("es-BO", {
+                  minimumFractionDigits: 2,
+                })}
               </div>
             </div>
 
@@ -543,7 +548,8 @@ export default function POS() {
                 onClick={() => setIsCloseRegisterModalOpen(true)}
                 className="flex items-center gap-2 px-4 py-2.5 bg-danger-50 text-danger-600 hover:bg-danger-100 hover:text-danger-700 rounded-xl transition-all font-bold border border-danger-100 hover:shadow-sm"
               >
-                <LogOut size={18} /> <span className="hidden sm:inline">Cerrar Caja</span>
+                <LogOut size={18} />{" "}
+                <span className="hidden sm:inline">Cerrar Caja</span>
               </button>
             </div>
           </div>
@@ -568,7 +574,11 @@ export default function POS() {
               return (
                 <button
                   key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
+                  onClick={() =>
+                    setSelectedCategory(
+                      selectedCategory === cat.id ? "all" : cat.id,
+                    )
+                  }
                   className={clsx(
                     "px-5 py-2.5 rounded-xl border-2 flex items-center gap-2.5 transition-all outline-none font-bold whitespace-nowrap text-sm",
                     selectedCategory === cat.id
@@ -767,12 +777,16 @@ export default function POS() {
         />
       )}
 
-      <div className={clsx(
-        "bg-white flex flex-col overflow-hidden shadow-2xl lg:shadow-xl hover:shadow-2xl z-50 lg:z-10",
-        "fixed lg:static inset-y-0 right-0 w-[90%] sm:w-[400px] lg:w-auto h-full lg:h-full lg:rounded-2xl lg:border lg:border-gray-100 transition-transform duration-300",
-        isMobileCartOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0",
-        !isMobileCartOpen && "hidden lg:flex"
-      )}>
+      <div
+        className={clsx(
+          "bg-white flex flex-col overflow-hidden shadow-2xl lg:shadow-xl hover:shadow-2xl z-50 lg:z-10",
+          "fixed lg:static inset-y-0 right-0 w-[90%] sm:w-[400px] lg:w-auto h-full lg:h-full lg:rounded-2xl lg:border lg:border-gray-100 transition-transform duration-300",
+          isMobileCartOpen
+            ? "translate-x-0"
+            : "translate-x-full lg:translate-x-0",
+          !isMobileCartOpen && "hidden lg:flex",
+        )}
+      >
         {/* Cart Header */}
         <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/80 shrink-0">
           <h2 className="text-xl font-black text-gray-900 flex items-center gap-3">
@@ -807,7 +821,9 @@ export default function POS() {
                 <ShoppingCart size={40} className="text-gray-300" />
               </div>
               <p className="font-bold text-gray-500">El carrito está vacío</p>
-              <p className="text-sm text-gray-400 mt-1">Busca o escanea productos para agregarlos</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Busca o escanea productos para agregarlos
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -903,7 +919,9 @@ export default function POS() {
         <div className="bg-gray-50/80 border-t border-gray-200 shrink-0 p-6 rounded-b-2xl">
           <div className="flex justify-between items-center text-sm font-medium text-gray-500 mb-3">
             <span>Subtotal</span>
-            <span className="font-mono text-gray-800">Bs. {subtotal.toFixed(2)}</span>
+            <span className="font-mono text-gray-800">
+              Bs. {subtotal.toFixed(2)}
+            </span>
           </div>
 
           {clientDiscountPercent > 0 && (
@@ -919,7 +937,9 @@ export default function POS() {
 
           {discount > 0 && (
             <div className="flex justify-between items-center text-sm text-amber-600 font-bold mb-3">
-              <span className="bg-amber-50 px-2 py-0.5 rounded-md">Descuento Manual</span>
+              <span className="bg-amber-50 px-2 py-0.5 rounded-md">
+                Descuento Manual
+              </span>
               <span className="font-mono">
                 - Bs. {Number(discount).toFixed(2)}
               </span>
@@ -960,8 +980,12 @@ export default function POS() {
           )}
         </div>
         <div className="flex flex-col items-start hidden sm:flex">
-          <span className="text-[10px] font-bold uppercase opacity-80 leading-none mb-1">Total a pagar</span>
-          <span className="text-sm font-black font-mono leading-none">Bs. {total.toFixed(2)}</span>
+          <span className="text-[10px] font-bold uppercase opacity-80 leading-none mb-1">
+            Total a pagar
+          </span>
+          <span className="text-sm font-black font-mono leading-none">
+            Bs. {total.toFixed(2)}
+          </span>
         </div>
       </button>
 
@@ -1230,7 +1254,9 @@ export default function POS() {
               <div className="w-20 h-20 bg-primary-50 text-primary-600 rounded-2xl flex items-center justify-center mb-4 shadow-inner border border-primary-100 transform rotate-3">
                 <Calculator size={40} className="transform -rotate-3" />
               </div>
-              <h2 className="text-2xl font-black text-gray-900 tracking-tight">Cerrar Caja</h2>
+              <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+                Cerrar Caja
+              </h2>
             </div>
 
             {/* System Balance */}
@@ -1384,7 +1410,9 @@ export default function POS() {
                 <>
                   <div className="flex justify-center mb-6 py-4 bg-gray-50 rounded-xl border border-gray-100">
                     <div className="flex flex-col items-center">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total a Pagar</span>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+                        Total a Pagar
+                      </span>
                       <span className="text-4xl font-black text-primary-600 font-mono tracking-tighter">
                         Bs. {total.toFixed(2)}
                       </span>
@@ -1408,10 +1436,19 @@ export default function POS() {
                           : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50",
                       )}
                     >
-                      <div className={clsx("p-2 rounded-full", paymentMethod === "EFECTIVO" ? "bg-primary-100" : "bg-gray-100")}>
+                      <div
+                        className={clsx(
+                          "p-2 rounded-full",
+                          paymentMethod === "EFECTIVO"
+                            ? "bg-primary-100"
+                            : "bg-gray-100",
+                        )}
+                      >
                         <Banknote size={24} />
                       </div>
-                      <span className="text-sm font-black uppercase tracking-wider">Efectivo</span>
+                      <span className="text-sm font-black uppercase tracking-wider">
+                        Efectivo
+                      </span>
                     </button>
                     <button
                       onClick={() => setPaymentMethod("QR")}
@@ -1422,10 +1459,19 @@ export default function POS() {
                           : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50",
                       )}
                     >
-                      <div className={clsx("p-2 rounded-full", paymentMethod === "QR" ? "bg-primary-100" : "bg-gray-100")}>
+                      <div
+                        className={clsx(
+                          "p-2 rounded-full",
+                          paymentMethod === "QR"
+                            ? "bg-primary-100"
+                            : "bg-gray-100",
+                        )}
+                      >
                         <QrCode size={24} />
                       </div>
-                      <span className="text-sm font-black uppercase tracking-wider">QR</span>
+                      <span className="text-sm font-black uppercase tracking-wider">
+                        QR
+                      </span>
                     </button>
                   </div>
 
@@ -1591,7 +1637,7 @@ export default function POS() {
                   "w-full py-4 text-white font-black uppercase tracking-wider text-[13px] rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50",
                   movementType === "INGRESO_EXTRA"
                     ? "bg-success-600 hover:bg-success-700 shadow-[0_8px_20px_-6px_rgba(22,163,74,0.5)] hover:-translate-y-0.5"
-                    : "bg-warning-500 hover:bg-warning-600 shadow-[0_8px_20px_-6px_rgba(245,158,11,0.5)] hover:-translate-y-0.5"
+                    : "bg-warning-500 hover:bg-warning-600 shadow-[0_8px_20px_-6px_rgba(245,158,11,0.5)] hover:-translate-y-0.5",
                 )}
               >
                 {processingMovement ? (
@@ -1749,9 +1795,9 @@ export default function POS() {
                     <span>
                       {lastSaleData.cliente
                         ? lastSaleData.cliente.cedula ||
-                        lastSaleData.cliente.ciNit ||
-                        lastSaleData.cliente.ci ||
-                        "0"
+                          lastSaleData.cliente.ciNit ||
+                          lastSaleData.cliente.ci ||
+                          "0"
                         : "0"}
                     </span>
                   </div>

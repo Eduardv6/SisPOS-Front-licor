@@ -203,6 +203,7 @@ export default function Reportes() {
           locale: es,
         }),
         Cajero: c.cashier,
+        "Monto Apertura": c.open,
         "Ventas Efvo": c.salesCash,
         "Ventas QR": c.salesQr,
         Ingresos: c.incomes,
@@ -222,6 +223,7 @@ export default function Reportes() {
       const columns = [
         "Apertura",
         "Cajero",
+        "M. Apert.",
         "Efvo",
         "QR",
         "Ing.",
@@ -234,6 +236,7 @@ export default function Reportes() {
       const data = cashStats.history.map((c) => [
         format(new Date(c.openingDate), "dd/MM/yy HH:mm", { locale: es }),
         c.cashier,
+        formatCurrency(c.open),
         formatCurrency(c.salesCash),
         formatCurrency(c.salesQr),
         formatCurrency(c.incomes),
@@ -1478,6 +1481,7 @@ export default function Reportes() {
                   <tr>
                     <th className="px-6 py-4">APERTURA / CIERRE</th>
                     <th className="px-6 py-4">CAJA / USUARIO</th>
+                    <th className="px-6 py-4 text-center">APERTURA</th>
                     <th className="px-6 py-4 text-center text-success-600">
                       EFECTIVO (VENTAS)
                     </th>
@@ -1550,6 +1554,9 @@ export default function Reportes() {
                               {c.cashier}
                             </div>
                           </div>
+                        </td>
+                        <td className="px-6 py-4 text-center font-bold text-gray-700">
+                          {formatCurrency(c.open)}
                         </td>
                         <td className="px-6 py-4 text-center font-bold text-gray-600">
                           {formatCurrency(c.salesCash)}
@@ -1650,7 +1657,7 @@ export default function Reportes() {
                   {cashStats.history.length === 0 && (
                     <tr>
                       <td
-                        colSpan={9}
+                        colSpan={10}
                         className="px-6 py-8 text-center text-gray-500 font-medium"
                       >
                         No hay cierres de caja registrados en el periodo
