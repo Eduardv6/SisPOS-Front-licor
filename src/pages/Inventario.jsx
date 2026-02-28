@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Search,
   Plus,
@@ -20,6 +20,7 @@ import {
   X,
   FileSpreadsheet,
   Minus,
+  ChevronDown,
 } from "lucide-react";
 
 const MOVEMENT_REASONS = {
@@ -84,6 +85,33 @@ export default function Inventario() {
     observaciones: "",
     tipoOperacionAjuste: "salida", // 'ingreso' o 'salida'
   });
+
+  // Combobox State
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+  const dropdownRef = useRef(null);
+
+  // Filtered Products for Combobox
+  const filteredProducts = useMemo(() => {
+    if (!productSearchTerm) return products;
+    const term = productSearchTerm.toLowerCase();
+    return products.filter(
+      (p) =>
+        p.nombre.toLowerCase().includes(term) ||
+        (p.codigoInterno && p.codigoInterno.toLowerCase().includes(term)),
+    );
+  }, [products, productSearchTerm]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsProductDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     fetchInitialData();
@@ -651,23 +679,119 @@ export default function Inventario() {
 
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
+                  <div className="relative" ref={dropdownRef}>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
                       Producto *
                     </label>
-                    <select
-                      name="productoId"
-                      value={formData.productoId}
-                      onChange={handleInputChange}
-                      className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+                    <div
+                      className={clsx(
+                        "w-full bg-gray-50 border rounded-lg flex items-center justify-between cursor-text transition-all",
+                        isProductDropdownOpen
+                          ? "border-primary-500 ring-2 ring-primary-500/20"
+                          : "border-gray-300 hover:border-gray-400",
+                      )}
+                      onClick={() => setIsProductDropdownOpen(true)}
                     >
-                      <option value="">Seleccionar producto</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.nombre} ({p.codigoInterno})
-                        </option>
-                      ))}
-                    </select>
+                      <div className="flex-1 flex items-center pr-2">
+                        {isProductDropdownOpen ? (
+                          <input
+                            type="text"
+                            className="w-full p-2.5 bg-transparent outline-none text-sm text-gray-900"
+                            placeholder="Buscar por nombre o código..."
+                            value={productSearchTerm}
+                            onChange={(e) =>
+                              setProductSearchTerm(e.target.value)
+                            }
+                            autoFocus
+                          />
+                        ) : (
+                          <div className="w-full p-2.5 text-sm truncate text-gray-700">
+                            {formData.productoId ? (
+                              (() => {
+                                const p = products.find(
+                                  (prod) => prod.id === formData.productoId,
+                                );
+                                return p
+                                  ? `${p.nombre} (${p.codigoInterno})`
+                                  : "Seleccionar producto";
+                              })()
+                            ) : (
+                              <span className="text-gray-500">
+                                Seleccionar producto
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="pr-3 text-gray-400 flex items-center">
+                        {formData.productoId && !isProductDropdownOpen && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFormData((prev) => ({
+                                ...prev,
+                                productoId: "",
+                              }));
+                              setProductSearchTerm("");
+                            }}
+                            className="mr-1 hover:text-gray-600 transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                        <ChevronDown size={16} />
+                      </div>
+                    </div>
+
+                    {isProductDropdownOpen && (
+                      <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2">
+                        {filteredProducts.length > 0 ? (
+                          filteredProducts.map((p) => (
+                            <div
+                              key={p.id}
+                              className={clsx(
+                                "px-4 py-2.5 cursor-pointer hover:bg-primary-50 transition-colors flex flex-col",
+                                formData.productoId === p.id
+                                  ? "bg-primary-50 border-l-2 border-primary-500"
+                                  : "border-l-2 border-transparent",
+                              )}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  productoId: p.id,
+                                }));
+                                setIsProductDropdownOpen(false);
+                                setProductSearchTerm("");
+                              }}
+                            >
+                              <span
+                                className={clsx(
+                                  "text-sm font-medium",
+                                  formData.productoId === p.id
+                                    ? "text-primary-700"
+                                    : "text-gray-900",
+                                )}
+                              >
+                                {p.nombre}
+                              </span>
+                              <span className="text-xs text-gray-500 font-mono mt-0.5">
+                                {p.codigoInterno} • Stock: {p.stock || 0}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-4 text-sm text-gray-500 text-center flex flex-col items-center">
+                            <Package size={24} className="text-gray-300 mb-2" />
+                            <p>No se encontraron productos</p>
+                            <p className="text-xs mt-1">
+                              Intenta con otro término
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
