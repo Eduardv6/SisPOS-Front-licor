@@ -240,7 +240,7 @@ export default function Dashboard() {
                               de {product.stockMinimo}
                             </p>
                             <Link
-                              to="/productos"
+                              to="/inventario"
                               className="text-xs font-bold text-primary-600 hover:underline mt-2 inline-block"
                               onClick={() => setIsNotificationsOpen(false)}
                             >
