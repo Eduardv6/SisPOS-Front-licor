@@ -38,6 +38,7 @@ import { customerService } from "../services/customerService";
 import { cashRegisterService } from "../services/cashRegisterService";
 import { settingService } from "../services/settingService";
 import { useAuth } from "../context/AuthContext";
+import TicketReceipt from "../components/TicketReceipt";
 
 export default function POS() {
   const { user } = useAuth();
@@ -423,7 +424,18 @@ export default function POS() {
           presentacionId: item.presentacionId || null,
         })),
         metodoPago: paymentMethod,
-        clienteId: selectedClient ? selectedClient.id : null,
+        clienteId:
+          selectedClient && !selectedClient.isExpress
+            ? selectedClient.id
+            : null,
+        clienteExpress:
+          selectedClient && selectedClient.isExpress
+            ? selectedClient.nombre
+            : null,
+        ciExpress:
+          selectedClient && selectedClient.isExpress
+            ? selectedClient.ciNit
+            : null,
         descuento: parseFloat(totalDiscount) || 0,
         montoRecibido: parseFloat(receivedAmount) || 0,
       };
@@ -1426,7 +1438,7 @@ export default function POS() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-3 gap-4 mb-6">
                     <button
                       onClick={() => setPaymentMethod("EFECTIVO")}
                       className={clsx(
@@ -1471,6 +1483,29 @@ export default function POS() {
                       </div>
                       <span className="text-sm font-black uppercase tracking-wider">
                         QR
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setPaymentMethod("TARJETA")}
+                      className={clsx(
+                        "p-4 rounded-xl border-2 flex flex-col items-center gap-2.5 transition-all outline-none focus:ring-4 focus:ring-primary-500/20",
+                        paymentMethod === "TARJETA"
+                          ? "border-primary-500 bg-primary-50 text-primary-700 shadow-inner"
+                          : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50",
+                      )}
+                    >
+                      <div
+                        className={clsx(
+                          "p-2 rounded-full",
+                          paymentMethod === "TARJETA"
+                            ? "bg-primary-100"
+                            : "bg-gray-100",
+                        )}
+                      >
+                        <CreditCard size={24} />
+                      </div>
+                      <span className="text-sm font-black uppercase tracking-wider">
+                        Tarjeta
                       </span>
                     </button>
                   </div>
@@ -1717,177 +1752,7 @@ export default function POS() {
 
             {/* Ticket Content (Scrollable) */}
             <div className="overflow-y-auto flex-1 p-8 pt-12 bg-gray-50 print:p-0 print:bg-white print:overflow-visible">
-              <style>{`
-                @media print {
-                  @page {
-                    size: 80mm auto;
-                    margin: 0;
-                  }
-                  body {
-                    margin: 0;
-                  }
-                }
-              `}</style>
-              <div
-                id="print-area"
-                className="bg-white p-6 shadow-sm mx-auto max-w-[300px] text-xs font-mono leading-relaxed print:shadow-none print:max-w-none print:w-full"
-              >
-                {/* Header */}
-                <div className="text-center mb-4">
-                  <div className="w-20 h-20 bg-white border border-gray-100 rounded-xl flex items-center justify-center mx-auto mb-2 overflow-hidden">
-                    {settings.empresa_logo ? (
-                      <img
-                        src={
-                          settings.empresa_logo?.startsWith("http")
-                            ? settings.empresa_logo
-                            : `${import.meta.env.VITE_API_URL || "http://localhost:5000"}${settings.empresa_logo}`
-                        }
-                        alt="Logo"
-                        className="max-w-full max-h-full object-contain"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-900 text-white flex items-center justify-center print:text-black print:border print:border-black">
-                        <Beer size={32} />
-                      </div>
-                    )}
-                  </div>
-                  <h2 className="font-bold text-base uppercase mb-1">
-                    {settings.empresa_nombre}
-                  </h2>
-                  <p>{settings.empresa_direccion}</p>
-                  <p className="text-[10px] text-gray-500">
-                    NIT: {settings.empresa_nit}
-                  </p>
-                </div>
-
-                <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
-
-                {/* Info */}
-                <div className="mb-2">
-                  <div className="flex justify-between">
-                    <span>FECHA:</span>
-                    <span>
-                      {new Date(lastSaleData.fecha).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>HORA:</span>
-                    <span>
-                      {new Date(lastSaleData.fecha).toLocaleTimeString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>CAJERO:</span>
-                    <span className="uppercase">{lastSaleData.usuario}</span>
-                  </div>
-                </div>
-
-                <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
-
-                {/* Client */}
-                <div className="mb-2">
-                  <div className="flex justify-between">
-                    <span className="font-bold">CLIENTE:</span>
-                    <span className="text-right text-[10px] break-words max-w-[150px]">
-                      {lastSaleData.cliente
-                        ? `${lastSaleData.cliente.nombre} ${lastSaleData.cliente.apellido || ""}`.trim()
-                        : "S/N"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-bold">NIT/CI:</span>
-                    <span>
-                      {lastSaleData.cliente
-                        ? lastSaleData.cliente.cedula ||
-                          lastSaleData.cliente.ciNit ||
-                          lastSaleData.cliente.ci ||
-                          "0"
-                        : "0"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
-
-                {/* Items */}
-                <div className="mb-2">
-                  <div className="flex justify-between font-bold mb-1 border-b border-gray-200 pb-1">
-                    <span>DESCRIPCION</span>
-                    <span>TOTAL</span>
-                  </div>
-                  {lastSaleData.items.map((item, idx) => (
-                    <div key={idx} className="mb-2">
-                      <div className="uppercase font-medium text-[10px] mb-0.5">
-                        {item.nombre}
-                      </div>
-                      <div className="flex justify-between items-baseline">
-                        <span className="text-gray-500 pl-2">
-                          {item.quantity} x{" "}
-                          {parseFloat(item.precioVenta).toFixed(2)}
-                        </span>
-                        <span className="font-medium">
-                          {(item.quantity * item.precioVenta).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
-
-                {/* Totals */}
-                <div className="mb-2 space-y-1">
-                  {lastSaleData.descuento > 0 && (
-                    <>
-                      <div className="flex justify-between text-[10px]">
-                        <span>SUBTOTAL:</span>
-                        <span>Bs. {lastSaleData.subtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-[10px]">
-                        <span>DESCUENTO:</span>
-                        <span>- Bs. {lastSaleData.descuento.toFixed(2)}</span>
-                      </div>
-                    </>
-                  )}
-
-                  <div className="flex justify-between font-bold text-sm pt-1 border-t border-dotted border-gray-300">
-                    <span>TOTAL A PAGAR</span>
-                    <span>Bs. {lastSaleData.total.toFixed(2)}</span>
-                  </div>
-
-                  <div className="pt-2">
-                    <div className="flex justify-between text-[10px]">
-                      <span>METODO PAGO:</span>
-                      <span className="uppercase font-bold">
-                        {lastSaleData.metodoPagoTexto}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                      <span>EFECTIVO RECIBIDO:</span>
-                      <span>
-                        Bs.{" "}
-                        {parseFloat(lastSaleData.montoRecibido || 0).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-[10px]">
-                      <span>CAMBIO:</span>
-                      <span>
-                        Bs. {parseFloat(lastSaleData.cambio || 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-b-2 border-dashed border-gray-300 my-2"></div>
-
-                <div className="text-center mt-4">
-                  <p className="font-bold uppercase">
-                    {settings.empresa_mensaje_recibo ||
-                      "¡GRACIAS POR SU COMPRA!"}
-                  </p>
-                  <p className="text-[10px] mt-1">Vuelva pronto</p>
-                </div>
-              </div>
+              <TicketReceipt saleData={lastSaleData} settings={settings} />
             </div>
 
             {/* Footer Actions */}
@@ -1905,28 +1770,6 @@ export default function POS() {
                 Cerrar
               </button>
             </div>
-
-            {/* CSS Print Styles */}
-            <style jsx>{`
-              @media print {
-                body * {
-                  visibility: hidden;
-                }
-                #print-area,
-                #print-area * {
-                  visibility: visible;
-                }
-                #print-area {
-                  position: absolute;
-                  left: 0;
-                  top: 0;
-                  width: 100%;
-                  margin: 0;
-                  padding: 0;
-                  box-shadow: none;
-                }
-              }
-            `}</style>
           </div>
         </div>
       )}

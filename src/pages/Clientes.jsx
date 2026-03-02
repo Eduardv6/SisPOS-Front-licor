@@ -801,7 +801,9 @@ export default function Clientes() {
                                   <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs font-medium">
                                     {venta.metodoPago === "EFECTIVO"
                                       ? "Efectivo"
-                                      : "QR"}
+                                      : venta.metodoPago === "TARJETA"
+                                        ? "Tarjeta"
+                                        : "QR"}
                                   </span>
                                 </td>
                                 <td className="px-4 py-3 text-right text-gray-600">

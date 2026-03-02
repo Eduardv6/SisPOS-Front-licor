@@ -20,6 +20,8 @@ import {
   ArrowUpCircle,
   ChevronLeft,
   ChevronRight,
+  Printer,
+  ScanBarcode,
 } from "lucide-react";
 import clsx from "clsx";
 import {
@@ -43,6 +45,8 @@ import reportService from "../services/reportService";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { exportToExcel, exportToPDF } from "../utils/exportUtils";
+import { settingService } from "../services/settingService";
+import TicketReceipt from "../components/TicketReceipt";
 
 export default function Reportes() {
   const [activeTab, setActiveTab] = useState("ventas"); // ventas, productos, inventario, cajas
@@ -74,6 +78,33 @@ export default function Reportes() {
     date: "",
     total: 0,
   });
+
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [settings, setSettings] = useState({
+    empresa_nombre: "Licorería",
+    empresa_nit: "123456789",
+    empresa_direccion: "Sucursal Central",
+    empresa_mensaje_recibo: "¡GRACIAS POR SU COMPRA!",
+    empresa_logo: null,
+  });
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await settingService.getSettings();
+        const settingsArray = Array.isArray(res) ? res : res.data || [];
+        const kv = {};
+        settingsArray.forEach((item) => {
+          kv[item.clave] = item.valor;
+        });
+        setSettings((prev) => ({ ...prev, ...kv }));
+      } catch (err) {
+        console.error("Error cargando configs:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -205,7 +236,8 @@ export default function Reportes() {
         Cajero: c.cashier,
         "Monto Apertura": c.open,
         "Ventas Efvo": c.salesCash,
-        "Ventas QR": c.salesQr,
+        "Ventas QR/Tarjeta":
+          (Number(c.salesQr) || 0) + (Number(c.salesTarjeta) || 0),
         Ingresos: c.incomes,
         Retiros: c.retiros,
         "Total Vendido": c.sales,
@@ -225,7 +257,7 @@ export default function Reportes() {
         "Cajero",
         "M. Apert.",
         "Efvo",
-        "QR",
+        "QR/Tarj.",
         "Ing.",
         "Ret.",
         "Total",
@@ -238,7 +270,9 @@ export default function Reportes() {
         c.cashier,
         formatCurrency(c.open),
         formatCurrency(c.salesCash),
-        formatCurrency(c.salesQr),
+        formatCurrency(
+          (Number(c.salesQr) || 0) + (Number(c.salesTarjeta) || 0),
+        ),
         formatCurrency(c.incomes),
         formatCurrency(c.retiros),
         formatCurrency(c.sales),
@@ -267,11 +301,12 @@ export default function Reportes() {
           .join(", "),
         Usuario: v.usuario,
         "Método Pago":
-          v.metodoPago === "EFECTIVO"
+          v.metodoPagoTexto ||
+          (v.metodoPago === "EFECTIVO"
             ? "Efectivo"
-            : v.metodoPago === "QR"
-              ? "QR"
-              : v.metodoPago,
+            : v.metodoPago === "TARJETA"
+              ? "Tarjeta"
+              : "QR"),
         "Monto Total": v.total,
         Descuento: v.descuento > 0 ? v.descuento : "-",
       }));
@@ -872,6 +907,7 @@ export default function Reportes() {
                         <th className="px-6 py-4">Usuario</th>
                         <th className="px-6 py-4 text-right">Monto Total</th>
                         <th className="px-6 py-4 text-center">Descuento</th>
+                        <th className="px-6 py-4 text-center">Ticket</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -890,14 +926,17 @@ export default function Reportes() {
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex flex-col gap-0.5 max-w-xs">
-                              {venta.productos.map((prod, idx) => (
-                                <span
-                                  key={idx}
-                                  className="text-xs text-gray-700"
-                                >
-                                  {prod.cantidad}x {prod.nombre}
-                                </span>
-                              ))}
+                              {(venta.items || venta.productos || []).map(
+                                (prod, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="text-xs text-gray-700"
+                                  >
+                                    {prod.quantity || prod.cantidad}x{" "}
+                                    {prod.nombre}
+                                  </span>
+                                ),
+                              )}
                             </div>
                           </td>
                           <td className="px-6 py-4 font-medium text-gray-800">
@@ -908,11 +947,12 @@ export default function Reportes() {
                               {formatCurrency(venta.total)}
                             </div>
                             <div className="text-xs text-gray-400 font-medium">
-                              {venta.metodoPago === "EFECTIVO"
-                                ? "Efectivo"
-                                : venta.metodoPago === "QR"
-                                  ? "QR"
-                                  : venta.metodoPago}
+                              {venta.metodoPagoTexto ||
+                                (venta.metodoPago === "EFECTIVO"
+                                  ? "Efectivo"
+                                  : venta.metodoPago === "TARJETA"
+                                    ? "Tarjeta"
+                                    : "QR")}
                             </div>
                           </td>
                           <td className="px-6 py-4 text-center">
@@ -926,12 +966,24 @@ export default function Reportes() {
                               </span>
                             )}
                           </td>
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              onClick={() => {
+                                setSelectedTicket(venta);
+                                setIsTicketModalOpen(true);
+                              }}
+                              className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors border border-transparent hover:border-primary-200 inline-flex"
+                              title="Imprimir Ticket"
+                            >
+                              <Printer size={18} />
+                            </button>
+                          </td>
                         </tr>
                       ))}
                       {salesHistory.length === 0 && (
                         <tr>
                           <td
-                            colSpan={6}
+                            colSpan={7}
                             className="px-6 py-8 text-center text-gray-500"
                           >
                             No hay ventas en este periodo.
@@ -1486,7 +1538,7 @@ export default function Reportes() {
                       EFECTIVO (VENTAS)
                     </th>
                     <th className="px-6 py-4 text-center text-info-600">
-                      QR (VENTAS)
+                      QR/TARJETA (VENTAS)
                     </th>
                     <th className="px-6 py-4 text-center text-primary-600">
                       INGRESOS
@@ -1562,7 +1614,10 @@ export default function Reportes() {
                           {formatCurrency(c.salesCash)}
                         </td>
                         <td className="px-6 py-4 text-center font-bold text-gray-600">
-                          {formatCurrency(c.salesQr)}
+                          {formatCurrency(
+                            (Number(c.salesQr) || 0) +
+                              (Number(c.salesTarjeta) || 0),
+                          )}
                         </td>
                         <td className="px-6 py-4 text-center">
                           <button
@@ -1675,6 +1730,44 @@ export default function Reportes() {
             onClose={() => setModalDetails({ ...modalDetails, show: false })}
             {...modalDetails}
           />
+        </div>
+      )}
+
+      {/* Ticket Modal */}
+      {isTicketModalOpen && selectedTicket && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsTicketModalOpen(false)}
+          ></div>
+          <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-md h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 print:hidden">
+              <h3 className="font-bold text-gray-900">Vista Previa Ticket</h3>
+              <button
+                onClick={() => setIsTicketModalOpen(false)}
+                className="p-1 hover:bg-gray-100 rounded-full"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-8 pt-12 bg-gray-50 print:p-0 print:bg-white print:overflow-visible">
+              <TicketReceipt saleData={selectedTicket} settings={settings} />
+            </div>
+            <div className="p-4 border-t border-gray-100 flex gap-3 print:hidden bg-white">
+              <button
+                onClick={() => window.print()}
+                className="flex-1 py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-colors flex items-center justify-center gap-2"
+              >
+                <ScanBarcode size={18} /> Imprimir
+              </button>
+              <button
+                onClick={() => setIsTicketModalOpen(false)}
+                className="px-6 py-3 bg-white border-2 border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
