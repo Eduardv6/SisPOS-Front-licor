@@ -777,7 +777,11 @@ export default function Inventario() {
                                 {p.nombre}
                               </span>
                               <span className="text-xs text-gray-500 font-mono mt-0.5">
-                                {p.codigoInterno} • Stock: {p.stock || 0}
+                                {p.codigoInterno} • Stock:{" "}
+                                {p.inventarios?.reduce(
+                                  (sum, inv) => sum + inv.stockActual,
+                                  0,
+                                ) || 0}
                               </span>
                             </div>
                           ))

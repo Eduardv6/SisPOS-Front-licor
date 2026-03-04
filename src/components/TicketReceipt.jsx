@@ -124,6 +124,12 @@ export default function TicketReceipt({ saleData, settings }) {
             <div key={idx} className="mb-2">
               <div className="uppercase font-medium text-[10px] mb-0.5">
                 {item.nombre}
+                {item.presentacionNombre &&
+                  item.presentacionNombre !== "Unidad" && (
+                    <span className="text-gray-500 ml-1">
+                      ({item.presentacionNombre})
+                    </span>
+                  )}
               </div>
               <div className="flex justify-between items-baseline">
                 <span className="text-gray-500 pl-2">

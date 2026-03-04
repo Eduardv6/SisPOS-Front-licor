@@ -934,6 +934,12 @@ export default function Reportes() {
                                   >
                                     {prod.quantity || prod.cantidad}x{" "}
                                     {prod.nombre}
+                                    {prod.presentacionNombre &&
+                                      prod.presentacionNombre !== "Unidad" && (
+                                        <span className="text-gray-500 ml-1">
+                                          ({prod.presentacionNombre})
+                                        </span>
+                                      )}
                                   </span>
                                 ),
                               )}
