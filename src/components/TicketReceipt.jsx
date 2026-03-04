@@ -173,23 +173,32 @@ export default function TicketReceipt({ saleData, settings }) {
                 {saleData.metodoPagoTexto || saleData.metodoPago || "Efectivo"}
               </span>
             </div>
-            {/* Show received amount only if it's available and makes sense (Efectivo) */}
-            {saleData.metodoPago === "EFECTIVO" &&
-              saleData.montoRecibido !== undefined && (
+            {/* Show received amount and change only for cash payments */}
+            {(saleData.metodoPago || "").toUpperCase() === "EFECTIVO" && (
+              <>
                 <div className="flex justify-between text-[10px]">
                   <span>EFECTIVO RECIBIDO:</span>
                   <span>
-                    Bs. {parseFloat(saleData.montoRecibido || 0).toFixed(2)}
+                    Bs.{" "}
+                    {parseFloat(
+                      saleData.montoRecibido ?? saleData.total ?? 0,
+                    ).toFixed(2)}
                   </span>
                 </div>
-              )}
-            {saleData.metodoPago === "EFECTIVO" &&
-              saleData.cambio !== undefined && (
                 <div className="flex justify-between text-[10px]">
                   <span>CAMBIO:</span>
-                  <span>Bs. {parseFloat(saleData.cambio || 0).toFixed(2)}</span>
+                  <span>
+                    Bs.{" "}
+                    {parseFloat(
+                      saleData.cambio ??
+                        (saleData.montoRecibido != null
+                          ? saleData.montoRecibido - saleData.total
+                          : 0),
+                    ).toFixed(2)}
+                  </span>
                 </div>
-              )}
+              </>
+            )}
           </div>
         </div>
 

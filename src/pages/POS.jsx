@@ -456,12 +456,14 @@ export default function POS() {
       setLastSaleData({
         ...saleData,
         id: res.id,
+        numeroVenta: res.ventaId || res.numeroVenta || res.id,
         fecha: new Date().toISOString(),
         items: cart,
         subtotal: subtotal,
         descuento: parseFloat(totalDiscount) || 0,
         total: total,
         cambio: res.cambio,
+        montoRecibido: parseFloat(receivedAmount) || 0,
         usuario: user?.nombre
           ? `${user.nombre} ${user.apellido || ""}`.trim()
           : user?.username || "Cajero",
