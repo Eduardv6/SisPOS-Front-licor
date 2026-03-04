@@ -1465,7 +1465,7 @@ export default function Reportes() {
             </div>
             <div className="bg-primary-50/50 p-6 rounded-xl border border-primary-100">
               <div className="text-sm font-bold text-primary-800 uppercase tracking-wide mb-1">
-                Total Recaudado
+                Monto Total en Ventas
               </div>
               <div className="text-3xl font-extrabold text-primary-700">
                 {formatCurrency(cashStats.totalRecaudado)}
